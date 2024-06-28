@@ -1,0 +1,24 @@
+.MessageCard-Body{
+    width: 100%;
+    background-color: white;
+}
+
+.MessageCard-Body:hover{
+    background-color: lightgray;
+}
+
+.MessageCard-TimeText{
+    font-size: 15px;
+    color: gray;
+}
+
+.MessageCard-Username{
+    font-size: 20px;
+    color: black;
+    margin: 0;
+    margin-top: 10px;
+}
+
+.MessageCard-Message{
+    margin: 0;
+}
