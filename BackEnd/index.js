@@ -8,7 +8,7 @@ const { Server } = require("socket.io");
 const io = new Server(server, {cors: {origin: "*"}});
 
 const admin = require("firebase-admin");
-const { getFirestore, Timestamp, FieldValue, Filter } = require('firebase-admin/firestore');
+const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 
 const serviceAccount = require("./fir-test-5bb7c-firebase-adminsdk-f38j5-05e81d9be2.json");
 
@@ -101,8 +101,12 @@ app.post('/addChat', (req, res) => {
         ChatEntries: [],
         ChatMemberIDs: [req.body.uid, ...req.body.chat.members],
         ChatName: req.body.chat.name,
+    }).then(()=>{
+        res.send({success: true});
+    }).catch(error=>{
+        res.send({success: false, error: error})
     })
-    res.send({success: true});
+    
 });
 
 app.post('/getChatMessages', (req, res) => {
@@ -152,24 +156,33 @@ io.on('connection', (socket) => {
     socket.on('AddFriend', ({ FriendEmail }) => {
         db.collection('UserData').where('Email', '==', FriendEmail).get().then((querySnapshot) => {
             if(!querySnapshot.empty){
-                querySnapshot.forEach(doc => {
-                    if(doc.id === uid) {
-                        return;
-                    }
-                    db.collection('UserData').doc(doc.id).update({
-                        FriendRequests: FieldValue.arrayUnion(uid)
-                    }).then(() => {
-                        console.log(doc.id)
-                        io.to(doc.id).emit('FriendRequest', {uid: uid});
-                    })
-                })
+                const doc = querySnapshot.docs[0];
+
+                if(doc.id === uid) {
+                    return;
+                }
+                db.collection('UserData').doc(doc.id).update({
+                    FriendRequests: FieldValue.arrayUnion(uid)
+                }).then(() => {
+                    io.to(doc.id).emit('FriendRequest', {uid: uid});
+                }).catch(error => console.log(error))
             }
         })
     });
 
     socket.on('joinRoom', (chatID) => {
-        socket.join(chatID);
-    })
+        const chatRef = db.collection('Chats');
+        chatRef.doc(chatID).get().then((doc) => {
+            const data = doc.data();
+            if(data.ChatMemberIDs.includes(uid)) {
+                socket.join(chatID);
+            }else{
+                return new Error('Unauthorized');
+            }
+        }).catch((error) => {
+            console.log(error);
+        })
+    });
 
     socket.on('leaveRoom', (chatID) => {
         socket.leave(chatID);
@@ -186,6 +199,8 @@ io.on('connection', (socket) => {
                     chatRef.doc(msg.chatID).update({
                         ChatEntries: FieldValue.arrayUnion({uid: uid, message: msg.message, timestamp:  Date.now()})
                     });
+                }else{
+                    return new Error('Unauthorized');
                 }
             }).then(() => {
                 io.to(msg.chatID).emit('RecieveMessage', {uid: uid, message: msg.message, timestamp:  Date.now()});
