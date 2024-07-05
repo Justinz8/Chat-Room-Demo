@@ -25,23 +25,20 @@ app.use(express.json());
 
 app.use(cors({origin: '*'}));
 
-app.use((req, res, next) => {
-    // console.log(req.body)
-    admin.auth().verifyIdToken(req.body.token, true).then((result) => {
-        req.body.uid = result.uid;
-        next();
-    }).catch((error) => {
-        console.log("error")
-        next(new Error('unauthorized'));
-    })
-});
-
 app.post('/SignUpInit', (req, res) => {
-    db.collection('UserData').doc(req.body.uid).set({
-        Email: req.body.email,
-        Username: req.body.username,
-        Friends: [],
-        FriendRequests: [],
+    console.log("EPs")
+    admin.auth().createUser({
+        email: req.body.Email,
+        emailVerified: false,
+        password: req.body.Password,
+        disabled: false,    
+    }).then((response)=>{
+        return db.collection('UserData').doc(response.uid).set({
+            Email: req.body.Email,
+            Username: req.body.Username,
+            Friends: [],
+            FriendRequests: [],
+        })
     }).then(() => {
         res.send({success: true});
     }).catch((error) => {
@@ -49,9 +46,27 @@ app.post('/SignUpInit', (req, res) => {
     });
 });
 
+app.use((req, res, next) => {
+    switch(req.url){
+        case "/SignUpInit":
+            next();
+            break;
+        default:
+            admin.auth().verifyIdToken(req.body.token, true).then((result) => {
+                req.body.uid = result.uid;
+                next();
+            }).catch((error) => {
+                console.log("error")
+                next(new Error('unauthorized'));
+            })
+            break;
+    }
+});
+
 
 
 app.post('/getChats', (req, res) => {
+    
     const chatRef = db.collection('Chats');
     const userDataRef = db.collection('UserData')
 
@@ -67,13 +82,13 @@ app.post('/getChats', (req, res) => {
                 return userDataRef.doc(x).get().then(user => {
                     if (!user.data()) {
                         return {
-                            id: x,
-                            name: x
+                            uid: x,
+                            Username: x
                         };
                     } else {
                         return {
-                            id: x,
-                            name: user.data().Username 
+                            uid: x,
+                            Username: user.data().Username 
                         };
                     }
                 });
@@ -86,7 +101,6 @@ app.post('/getChats', (req, res) => {
             });
         }));
     }).then(chats => {
-        console.log(chats)
         res.send({success: true, chats: chats});
     }).catch(error => {
         console.log(error);
@@ -120,24 +134,34 @@ app.post('/getChatMessages', (req, res) => {
     });
 });
 
-app.post('/getFriendRequests', (req, res) => {
+app.post('/getUserData', (req, res) => {
     db.collection('UserData').doc(req.body.uid).get().then((doc1) => {
-        Promise.all(doc1.data().FriendRequests.map(x => {
-            return db.collection('UserData').doc(x).get().then(doc2 => {
-                return {
-                    uid: x,
-                    Username: doc2.data().Username
-                }
-            })
-        })).then(requests => {
-            res.send({success: true, requests: requests});
-        });
+        return Promise.all([
+            Promise.all(doc1.data().FriendRequests.map(x => {
+                        return db.collection('UserData').doc(x).get().then(doc2 => {
+                            return {
+                                uid: x,
+                                Username: doc2.data().Username
+                            }
+                        })})),
+            Promise.all(doc1.data().Friends.map(x => {
+                return db.collection('UserData').doc(x).get().then(doc2 => {
+                    return {
+                        uid: x,
+                        Username: doc2.data().Username
+                    }
+                })
+            })),
+            doc1.data().Username
+        ])
+    }).then(val => {
+        res.send({success: true, requests: val[0], friends: val[1], Username: val[2]});
     });
 });
 
 io.use((socket, next) => {
+    if(!socket.handshake.auth.token) return;
     admin.auth().verifyIdToken(socket.handshake.auth.token, true).then((result) => {
-        
         socket.request.headers.uid = result.uid;
         next();
     }).catch((error) => {
@@ -153,6 +177,46 @@ io.on('connection', (socket) => {
 
     socket.join(uid);
 
+    function AcceptFriendReq(AcceptedUser){
+        const currentUserDoc = db.collection("UserData").doc(uid);
+        const acceptedUserDoc = db.collection("UserData").doc(AcceptedUser);
+
+        currentUserDoc.get().then(val => {
+            if(val.data().FriendRequests.includes(AcceptedUser)){
+                currentUserDoc.update({
+                    FriendRequests: FieldValue.arrayRemove(AcceptedUser),
+                }).then(()=>{
+                    return Promise.all([
+                        acceptedUserDoc.update({
+                            Friends: FieldValue.arrayUnion(uid),
+                        }),
+                        currentUserDoc.update({
+                            Friends: FieldValue.arrayUnion(AcceptedUser),
+                        }),
+                    ])
+                }).then(()=>{
+                    return Promise.all([
+                        acceptedUserDoc.get().then((val)=>{
+                            return val.data().Username;
+                        }),
+                        currentUserDoc.get().then((val)=>{
+                            return val.data().Username;
+                        }),
+                    ])
+                }).then((Usernames)=>{
+                    socket.to(uid).emit("NewFriend", {uid: AcceptedUser, Username: Usernames[0]});
+                    socket.to(AcceptedUser).emit("NewFriend", {uid: uid, Username: Usernames[1]});
+                })
+            }
+        }).catch(err=>{
+            console.log(err);
+        })
+    }
+
+    socket.on("AcceptFriendReq", (AcceptedUser) => {
+        AcceptFriendReq(AcceptedUser)
+    })
+
     socket.on('AddFriend', ({ FriendEmail }) => {
         db.collection('UserData').where('Email', '==', FriendEmail).get().then((querySnapshot) => {
             if(!querySnapshot.empty){
@@ -161,10 +225,28 @@ io.on('connection', (socket) => {
                 if(doc.id === uid) {
                     return;
                 }
-                db.collection('UserData').doc(doc.id).update({
-                    FriendRequests: FieldValue.arrayUnion(uid)
-                }).then(() => {
-                    io.to(doc.id).emit('FriendRequest', {uid: uid});
+
+                db.collection("UserData").doc(doc.id).get().then((val)=>{
+                    if(val.data().FriendRequests.includes(uid) || val.data().Friends.includes(uid)){
+                        return Promise.reject("Unable to send Friend Request");
+                    }
+                }).then(()=>{
+                    return db.collection("UserData").doc(uid).get().then((val) => {
+                        if(val.data().FriendRequests.includes(doc.id)){
+                            AcceptFriendReq(doc.id);
+                            return Promise.reject("Accepted Friend Request");
+                        }
+                    })
+                }).then(()=>{
+                    return db.collection('UserData').doc(doc.id).update({
+                        FriendRequests: FieldValue.arrayUnion(uid)
+                    })
+                }).then(()=>{
+                    return db.collection('UserData').doc(uid).get().then((val)=>{
+                        return val.data().Username;
+                    })
+                }).then((Username) => {
+                    io.to(doc.id).emit('FriendRequest', {uid: uid, Username: Username});
                 }).catch(error => console.log(error))
             }
         })
@@ -192,7 +274,6 @@ io.on('connection', (socket) => {
 
         if(msg.chatID){
             const chatRef = db.collection('Chats');
-
             chatRef.doc(msg.chatID).get().then((doc) => {  
                 const data = doc.data();
                 if(data.ChatMemberIDs.includes(uid)) {

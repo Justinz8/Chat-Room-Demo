@@ -2,14 +2,29 @@ import "./Sidebar.css";
 
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { useState, useEffect } from "react";
+
+import { auth } from "../../firebase";
+
 import ChatCard from "./ChatCard";
 import PopupFriends from "../Popup/PopupFriends";
 
-export default function Sidebar(props: any) {
-  const [chats, setChats] = useState<any>([]);
+import { User, Chat } from "../../interfaces";
+
+import AddChat from "../Popup/AddChat";
+
+interface props{
+  TestAddChat: ()=>void,
+  setCurrentChat: (ID: string) => void,
+  addFriend: (FriendEmail: string) => void,
+  FriendRequests: User[],
+  Friends: User[]
+}
+
+export default function Sidebar(props: props) {
+  const [chats, setChats] = useState<Chat[]>([]);
 
   useEffect(() => {
-    onAuthStateChanged(props.auth, (user) => {
+    onAuthStateChanged(auth, (user) => {
       if (user) {
         user.getIdToken().then((token) => {
           fetch("http://localhost:3000/getChats", {
@@ -28,18 +43,16 @@ export default function Sidebar(props: any) {
     });
   }, []);
 
-  const Styledchats = chats.map((x: any) => (
+  const Styledchats = chats.map((x: Chat) => (
     <ChatCard
       key={x.id}
-      name={x.name}
-      members={x.members}
-      chatID={x.id}
+      chatDetails = {x}
       setCurrentChat={props.setCurrentChat}
     />
   ));
 
   function logoutHandler() {
-    signOut(props.auth).catch((error) => {
+    signOut(auth).catch((error) => {
       console.log(error);
     });
   }
@@ -55,6 +68,7 @@ export default function Sidebar(props: any) {
         addFriend={props.addFriend}
         FriendRequests={props.FriendRequests}
       />
+      <AddChat Friends={props.Friends}/>
     </div>
   );
 }

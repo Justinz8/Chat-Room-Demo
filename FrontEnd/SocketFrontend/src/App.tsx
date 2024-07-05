@@ -1,61 +1,51 @@
-import { io } from "socket.io-client";
 import { auth } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
 
 import { useEffect, useState } from "react";
 import Sidebar from "./components/SideBarComponents/Sidebar";
 
-import samplechats from "./samplechats.json";
-
 import PopupAuth from "./components/Popup/PopupAuth";
 
 import ChatWindow from "./components/ChatArea/ChatWindow";
 
+import { User } from "./interfaces";
+
+import { useSocket } from "./CustomHooks";
+
+import { useFetch } from "./CustomHooks";
+
+
 import "./App.css";
 
 function App() {
-  const [token, setToken] = useState<string>("");
   const [loggedIn, setLoggedIn] = useState<number>(0);
 
-  const [FriendRequests, SetFriendRequests] = useState<any[]>([]);
+  const [FriendRequests, SetFriendRequests] = useState<User[]>([]);
+
+  const [Friends, SetFriends] = useState<User[]>([]);
+
+  const Fetch = useFetch('http://localhost:3000');
 
   useEffect(() => {
+    console.log("PEEN")
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        user.getIdToken().then((token) => {
-          setToken(token);
-
-          //initial api calls go here
-          fetch("http://localhost:3000/getFriendRequests", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ token: token }),
-          })
-            .then((response) => response.json())
-            .then((data) => {
-              SetFriendRequests(data.requests);
-            });
+        Fetch('getUserData').then((data) => {
+          console.log(data)
+          SetFriendRequests(data.requests);
+          SetFriends(data.friends);
         });
         setLoggedIn(1);
       } else {
         setLoggedIn(-1);
-        setToken("");
       }
     });
   }, []);
 
-  async function getToken() {
-    const curtoken = await auth.currentUser?.getIdToken();
-    if (curtoken === undefined) return "";
 
-    setToken(curtoken);
-    return curtoken;
-  }
-
+  //Temp FUnction:
   function TestAddChat() {
-    getToken().then((token) => {
+    auth.currentUser?.getIdToken().then((token) => {
       fetch("http://localhost:3000/addChat", {
         method: "POST",
         headers: {
@@ -76,28 +66,12 @@ function App() {
 
   const [currentChatID, setCurrentChatID] = useState<string>("");
 
-  const [socket, SetSocket] = useState<any>(null);
+  const socket = useSocket();
+  
 
   useEffect(() => {
     if (socket) {
-      socket.close();
-    }
-    const newSocket = io("http://localhost:3000", {
-      auth: {
-        token: token,
-      },
-    });
-
-    SetSocket(newSocket);
-
-    return () => {
-      newSocket.close();
-    };
-  }, [token]);
-
-  useEffect(() => {
-    if (socket) {
-      socket.on("connect_error", (err: any) => {
+      socket.on("connect_error", (err: Error) => {
         console.error(err);
       });
 
@@ -107,8 +81,8 @@ function App() {
         }
       });
 
-      socket.on("FriendRequest", (User: any) => {
-        console.log(User);
+      socket.on("FriendRequest", (User: User) => {
+        SetFriendRequests((x: User[]) => [...x, User])
       });
     }
   }, [socket]);
@@ -121,35 +95,37 @@ function App() {
 
   function setCurrentChat(ID: string) {
     if (currentChatID === ID) return;
-    socket.emit("leaveRoom", currentChatID);
-    socket.emit("joinRoom", ID);
+    if(socket){
+      socket.emit("leaveRoom", currentChatID);
+      socket.emit("joinRoom", ID);
+    }
     setCurrentChatID(ID);
   }
+
 
   function loadFunction() {
     if (loggedIn === 1) {
       return (
         <>
           <Sidebar
-            auth={auth}
             TestAddChat={TestAddChat}
             setCurrentChat={setCurrentChat}
             addFriend={addFriend}
             FriendRequests={FriendRequests}
+            Friends={Friends}
           />
           <ChatWindow
             currentChatID={currentChatID}
-            getToken={getToken}
-            socket={socket}
           />
         </>
       );
     } else if (loggedIn === -1) {
-      return <PopupAuth auth={auth} />;
+      return <PopupAuth/>;
     }
   }
 
-  return <div className="Main-Wrapper">{loadFunction()}</div>;
+  return <div className="Main-Wrapper">{loadFunction()}</div>
 }
+
 
 export default App;

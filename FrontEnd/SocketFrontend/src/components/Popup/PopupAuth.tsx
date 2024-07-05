@@ -1,64 +1,55 @@
 import "./Authorization.css";
 import { useState } from "react";
 
+import { auth } from "../../firebase"
+
+import { useFetch } from "../../CustomHooks";
+
 import {
-  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
 
-export default function PopupAuth(props: any) {
-  const [userCredentials, setUserCredentials] = useState<any>({
+import { UserCredentialsObject } from "../../interfaces";
+
+export default function PopupAuth() {
+  const [userCredentials, setUserCredentials] = useState<UserCredentialsObject>({
     Email: "",
     Password: "",
     Username: "",
   });
 
+  const Fetch = useFetch('http://localhost:3000');
+
   function handleCredentialChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setUserCredentials((x: any) => {
+    setUserCredentials((x: UserCredentialsObject) => {
       return { ...x, [e.target.name]: e.target.value };
     });
   }
 
-  function SignUpHandler(e: any) {
+  function SignUpHandler(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    createUserWithEmailAndPassword(
-      props.auth,
-      userCredentials.Email,
-      userCredentials.Password
-    )
-      .then(async (userCredential) => {
-        // Signed in
-        const user = userCredential.user;
-        console.log(user);
-        // ...
+    Fetch("SignUpInit", {
+      Username: userCredentials.Username,
+      Email: userCredentials.Email,
+      Password: userCredentials.Password
+    }).then(()=>{
+      signInWithEmailAndPassword(auth, userCredentials.Email, userCredentials.Password)
+    }).catch((error) => {
+      const errorCode = error;
+      const errorMessage = error.message;
+      console.log(errorCode, errorMessage);
+    });
 
-        fetch("http://localhost:3000/SignUpInit", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            token: await user.getIdToken(),
-            email: user.email,
-            username: userCredentials.Username,
-          }),
-        });
-      })
-      .catch((error) => {
-        const errorCode = error;
-        const errorMessage = error.message;
-        console.log(errorCode, errorMessage);
-      });
   }
 
-  function LoginHandler(e: any) {
+  function LoginHandler(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     signInWithEmailAndPassword(
-      props.auth,
-      e.target.Email.value,
-      e.target.Password.value
+      auth,
+      userCredentials.Email,
+      userCredentials.Password
     ).catch((error) => {
       const errorCode = error;
       const errorMessage = error.message;

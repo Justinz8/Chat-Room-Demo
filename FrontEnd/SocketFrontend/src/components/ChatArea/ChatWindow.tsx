@@ -2,20 +2,32 @@ import "./ChatWindow.css";
 
 import { useState, useEffect } from "react";
 
+import { useSocket } from "../../CustomHooks";
+
 import MessageCard from "./MessageCard";
 
-export default function ChatWindow(props: any) {
-  const socket = props.socket;
+import { Message } from "../../interfaces";
+
+import { useFetch } from "../../CustomHooks";
+interface props{
+  currentChatID: string,
+}
+
+export default function ChatWindow(props: props) {
+  const socket = useSocket();
+
   const currentChatID = props.currentChatID;
 
   const [message, SetMessage] = useState("");
 
-  const [currentMessages, SetCurrentMessages] = useState<any[]>([]);
+  const [currentMessages, SetCurrentMessages] = useState<Message[]>([]);
+
+  const Fetch = useFetch('http://localhost:3000');
 
   useEffect(() => {
     if (socket) {
-      socket.on(`RecieveMessage`, (text: any) => {
-        SetCurrentMessages((x) => [...x, text]);
+      socket.on(`RecieveMessage`, (message: Message) => {
+        SetCurrentMessages((x) => [...x, message]);
       });
     }
     return () => {
@@ -25,18 +37,10 @@ export default function ChatWindow(props: any) {
 
   useEffect(() => {
     if (currentChatID) {
-      props.getToken().then((token: any) => {
-        fetch("http://localhost:3000/getChatMessages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ token: token, chatID: currentChatID }),
-        })
-          .then((response) => response.json())
-          .then((data) => {
-            SetCurrentMessages(data.ChatMessages);
-          });
+      Fetch('getChatMessages', {
+        chatID: currentChatID,
+      }).then((data) => {
+        SetCurrentMessages(data.ChatMessages);
       });
     }
   }, [currentChatID]);
@@ -47,11 +51,14 @@ export default function ChatWindow(props: any) {
 
   function submitMessage(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    socket.emit(`SendMessage`, { message: message, chatID: currentChatID });
+    if(socket){
+      socket.emit(`SendMessage`, { message: message, chatID: currentChatID });
+    }
+    
     SetMessage("");
   }
 
-  const messages = currentMessages.map((message: any, index: number) => {
+  const messages = currentMessages.map((message: Message, index: number) => {
     let merge = false;
 
     if (index - 1 >= 0 && message.uid === currentMessages[index - 1]?.uid) {
