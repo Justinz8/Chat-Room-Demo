@@ -10,18 +10,43 @@ import PopupFriends from "../Popup/PopupFriends";
 
 import { User, Chat } from "../../interfaces";
 
+import { useSocket } from "../../CustomHooks";
+
 import AddChat from "../Popup/AddChat";
 
 interface props{
-  TestAddChat: ()=>void,
   setCurrentChat: (ID: string) => void,
-  addFriend: (FriendEmail: string) => void,
   FriendRequests: User[],
-  Friends: User[]
 }
 
 export default function Sidebar(props: props) {
   const [chats, setChats] = useState<Chat[]>([]);
+
+  const socket = useSocket();
+
+  useEffect(()=>{
+    if(socket){
+      socket.on('UpdateChatUsers', ({Chatid, NewUser})=>{
+        setChats(x => {
+          return x.map(chat => {
+            if(chat.id === Chatid){
+              return {
+                ...chat,
+                members: [...chat.members, NewUser]
+              }
+            }
+            return chat;
+          })
+        })
+      })
+    }
+  }, [socket])
+
+  console.log(chats)
+
+  function addChatsHelper(chat: Chat){
+    setChats(x=>[...x, chat]);
+  }
 
   useEffect(() => {
     onAuthStateChanged(auth, (user) => {
@@ -60,15 +85,13 @@ export default function Sidebar(props: props) {
   return (
     <div className="Sidebar-Wrapper">
       {Styledchats}
-      <button onClick={props.TestAddChat}>Test Add Chat</button>
       <button className="Sidebar-Logout" onClick={logoutHandler}>
         Logout
       </button>
       <PopupFriends
-        addFriend={props.addFriend}
         FriendRequests={props.FriendRequests}
       />
-      <AddChat Friends={props.Friends}/>
+      <AddChat addChatsHelper={addChatsHelper}/>
     </div>
   );
 }

@@ -7,7 +7,6 @@ import React, { useState } from "react";
 import { useSocket } from "../../CustomHooks";
 
 interface props{
-  addFriend: (FriendEmail: string) => void,
   FriendRequests: User[]
 }
 
@@ -18,9 +17,15 @@ export default function PopupFriends(props: props) {
 
   const socket = useSocket();
 
+  function addFriend(FriendEmail: string) {
+    if (socket) {
+      socket.emit("AddFriend", { FriendEmail: FriendEmail });
+    }
+  }
+
   function onFriendSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    props.addFriend(FriendEmail);
+    addFriend(FriendEmail);
   }
 
   function AcceptFriendReq(CurrentFriendReq: string){

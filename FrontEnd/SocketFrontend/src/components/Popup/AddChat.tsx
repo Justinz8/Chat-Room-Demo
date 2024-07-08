@@ -1,16 +1,21 @@
 import { User } from "../../interfaces"
-import { useState } from "react"
+import { useState, useEffect, useContext } from "react"
 import { useSocket } from "../../CustomHooks"
 import './AddChat.css'
 
+import { Chat } from "../../interfaces"
+
+import { getFriendsContext } from "../../GlobalContextProvider"
+
 interface props{
-    Friends: User[]
+    addChatsHelper: (chat: Chat)=>void
 }
 
 interface AddChatForm{
     Name: string,
     Friends: User[]
 }
+
 
 export default function AddChat(props: props){
 
@@ -20,6 +25,8 @@ export default function AddChat(props: props){
     })
 
     const socket = useSocket();
+
+    const [Friends, ] = useContext(getFriendsContext());
 
     function AddChatNameFormHandler(e: React.ChangeEvent<HTMLInputElement>){
         SetAddChatForm(x => {
@@ -42,9 +49,9 @@ export default function AddChat(props: props){
         })
     }
 
-    const FriendOptions = props.Friends.map((x:User) => {
+    const FriendOptions = Friends.map((x:User) => {
         return (
-            <option onClick={()=>{AddChatFormAddFriendHandler(x)}}>
+            <option onClick={()=>{AddChatFormAddFriendHandler(x)}} key={x.uid}>
                 {x.Username}
             </option>
         )
@@ -70,7 +77,7 @@ export default function AddChat(props: props){
 
     const AddedFriends = AddChatForm.Friends.map((x: User) => {
         return (
-            <li>
+            <li key={x.uid}>
                 <div>
                     <p>{x.Username}</p>
                     <button onClick={()=>{RemoveFriend(x.uid)}}>Remove</button>
@@ -80,15 +87,32 @@ export default function AddChat(props: props){
         )
     })
 
+    useEffect(()=>{
+        if(socket){
+            socket.on('newChat', (chat: Chat) => {
+                console.log(chat)
+                props.addChatsHelper(chat);
+            })
+        }
+    }, [socket])
+
     function handleAddChatFormSubmit(e: React.FormEvent<HTMLFormElement>){
         e.preventDefault();
 
-        fetch()
+        if(socket){
+            socket.emit('addChat', {
+                chat: {
+                    name: AddChatForm.Name,
+                    members: AddChatForm.Friends.map(x => x.uid),
+                }
+            })
+            SetAddChatForm({
+                Name: "",
+                Friends: []
+            })
+        }
 
-        SetAddChatForm({
-            Name: "",
-            Friends: []
-        })
+
     }
 
     function AddChatPopUpBody(){

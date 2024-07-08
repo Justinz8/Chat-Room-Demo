@@ -14,7 +14,7 @@ export interface SocketProviderContext{
 export interface Message{
     message: string,
     timestamp: number,
-    uid: string
+    sender: User
 }
 
 export interface Chat{

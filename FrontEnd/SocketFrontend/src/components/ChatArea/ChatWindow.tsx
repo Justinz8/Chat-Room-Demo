@@ -9,14 +9,16 @@ import MessageCard from "./MessageCard";
 import { Message } from "../../interfaces";
 
 import { useFetch } from "../../CustomHooks";
-interface props{
-  currentChatID: string,
-}
 
-export default function ChatWindow(props: props) {
+import { useContext } from "react";
+import { getChatIDContext } from "../../GlobalContextProvider";
+
+import ChatWindowHeader from "./ChatWindowHeader";
+
+export default function ChatWindow() {
   const socket = useSocket();
 
-  const currentChatID = props.currentChatID;
+  const [currentChatID] = useContext(getChatIDContext());
 
   const [message, SetMessage] = useState("");
 
@@ -61,13 +63,13 @@ export default function ChatWindow(props: props) {
   const messages = currentMessages.map((message: Message, index: number) => {
     let merge = false;
 
-    if (index - 1 >= 0 && message.uid === currentMessages[index - 1]?.uid) {
+    if (index - 1 >= 0 && message.sender.uid === currentMessages[index - 1]?.sender.uid) {
       merge = true;
     }
 
     return (
       <MessageCard
-        uid={message.uid}
+        sender={message.sender}
         message={message.message}
         time={new Date(message.timestamp).toUTCString()}
         merge={merge}
@@ -78,6 +80,7 @@ export default function ChatWindow(props: props) {
 
   return (
     <div className="ChatWindow-Wrapper">
+      <ChatWindowHeader />
       <div className="ChatWindow-Content"></div>
       <form className="TypeBar" onSubmit={submitMessage}>
         {messages}

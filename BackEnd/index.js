@@ -25,8 +25,27 @@ app.use(express.json());
 
 app.use(cors({origin: '*'}));
 
+//returns a promise where given a list of UserIDs returns a list of objects that contains both the original 
+//userIDs and their respective usernames
+function getUsernames(UserIDs, userDataRef){
+    return Promise.all(UserIDs.map(x => {
+        return userDataRef.doc(x).get().then(user => {
+            if (!user.data()) {
+                return {
+                    uid: x,
+                    Username: x
+                };
+            } else {
+                return {
+                    uid: x,
+                    Username: user.data().Username 
+                };
+            }
+        })
+    }))
+}
+
 app.post('/SignUpInit', (req, res) => {
-    console.log("EPs")
     admin.auth().createUser({
         email: req.body.Email,
         emailVerified: false,
@@ -57,7 +76,7 @@ app.use((req, res, next) => {
                 next();
             }).catch((error) => {
                 console.log("error")
-                next(new Error('unauthorized'));
+                next(new Error('Unauthorized'));
             })
             break;
     }
@@ -75,24 +94,7 @@ app.post('/getChats', (req, res) => {
 
         return Promise.all(querySnapshot.docs.map(doc => {//map each doc to a promise
             const data = doc.data();
-
-            return Promise.all(data.ChatMemberIDs.map(x => {//promise.all wraps all the promises into one promise
-                //make calls to fetch the username of each member in the chat
-                //only move onto next step once every call has been resolved
-                return userDataRef.doc(x).get().then(user => {
-                    if (!user.data()) {
-                        return {
-                            uid: x,
-                            Username: x
-                        };
-                    } else {
-                        return {
-                            uid: x,
-                            Username: user.data().Username 
-                        };
-                    }
-                });
-            })).then(members => {//return a member struct as the final value of the promise
+            return getUsernames(data.ChatMemberIDs, userDataRef).then(members => {//return a member struct as the final value of the promise
                 return {
                     name: data.ChatName, 
                     id: doc.id, 
@@ -108,33 +110,49 @@ app.post('/getChats', (req, res) => {
     });;
 });
 
-app.post('/addChat', (req, res) => {
-    const chatRef = db.collection('Chats');
-
-    chatRef.add({
-        ChatEntries: [],
-        ChatMemberIDs: [req.body.uid, ...req.body.chat.members],
-        ChatName: req.body.chat.name,
-    }).then(()=>{
-        res.send({success: true});
-    }).catch(error=>{
-        res.send({success: false, error: error})
-    })
-    
-});
-
 app.post('/getChatMessages', (req, res) => {
     db.collection('Chats').doc(req.body.chatID).get().then(content => {
-        if(!content.data().ChatMemberIDs.includes(req.body.uid)){
+        const UserRef = db.collection('UserData');
+
+        //if current user not in the chat dont authorize access
+        if(!content.data().ChatMemberIDs.includes(req.body.uid)){ 
             res.send({success: false, error: "Unauthorized"});
             return;
         }else{
-            res.send({success: true, ChatMessages: content.data().ChatEntries});
+            const map = new Map() //maps all user ids that show up in message history to a username
+
+            Promise.all(content.data().ChatEntries.map(x => {
+                return new Promise((resolve, reject)=>{
+                    if(!map.has(x.uid)){ //if user id not in the map then get username from db and store it into map
+                        getUsernames([x.uid], UserRef).then((member) => {
+                            map.set(x.uid, member[0].Username);
+                            resolve()
+                        }).catch(error=>{
+                            reject(error)
+                        })
+                    }else{
+                        resolve()
+                    }
+                }).then(()=>{
+                    return ({
+                        ...x,
+                        uid: null,
+                        sender: {
+                            uid: x.uid,
+                            Username: map.get(x.uid)
+                        }
+                    })
+                })
+            })).then((ChatEntries)=>{
+                res.send({success: true, ChatMessages: ChatEntries});
+            }).catch(error=>{
+                console.log(error);
+            })
         }
     });
 });
 
-app.post('/getUserData', (req, res) => {
+app.post('/getUserData', (req, res) => { //returns all immediately relevent information about the user
     db.collection('UserData').doc(req.body.uid).get().then((doc1) => {
         return Promise.all([
             Promise.all(doc1.data().FriendRequests.map(x => {
@@ -165,7 +183,7 @@ io.use((socket, next) => {
         socket.request.headers.uid = result.uid;
         next();
     }).catch((error) => {
-        next(new Error('unauthorized'));
+        next(new Error('Unauthorized'));
     })
 });
 
@@ -177,37 +195,109 @@ io.on('connection', (socket) => {
 
     socket.join(uid);
 
-    function AcceptFriendReq(AcceptedUser){
-        const currentUserDoc = db.collection("UserData").doc(uid);
-        const acceptedUserDoc = db.collection("UserData").doc(AcceptedUser);
+    socket.on('addChat', ({ chat })=>{
+        const chatRef = db.collection('Chats');
+        const userDataRef = db.collection('UserData');
 
-        currentUserDoc.get().then(val => {
-            if(val.data().FriendRequests.includes(AcceptedUser)){
+        const ChatMemberIDs = [uid, ...chat.members];
+
+        userDataRef.doc(uid).get().then((doc) => {//Checks if every friend the user is trying to add is a friend
+            const data = doc.data();
+
+            if(!chat.members.every(x => data.Friends.includes(x))){
+                return Promise.reject('Unauthorized')
+            }
+        }).then(()=>{
+            return chatRef.add({
+                ChatEntries: [],
+                ChatMemberIDs: ChatMemberIDs,
+                ChatName: chat.name,
+            })
+        }).then((doc)=>{
+            return Promise.all(
+                [getUsernames(ChatMemberIDs, userDataRef),
+                doc.id]
+            )
+        }).then(val => {
+            return {
+                name: chat.name, 
+                id: val[1], 
+                members: val[0]
+            };
+        }).then((newchat)=>{
+            io.to(ChatMemberIDs).emit('newChat', newchat)
+        }).catch(error=>{
+            console.log(error);
+        })
+    })
+
+    socket.on('AddUserToChat', ({ Frienduid, Chatid }) =>{
+        const ChatRef = db.collection('Chats');
+        const userDataRef = db.collection('UserData');
+
+        ChatRef.doc(Chatid).get().then((Chatdoc)=>{ //if user is not in the chat prevent adding friend to chat
+            const ChatData = Chatdoc.data();
+
+            if(!ChatData.ChatMemberIDs.includes(uid)){
+                return Promise.reject('Unauthorized');
+            }
+            userDataRef.doc(uid).get().then((doc)=>{ //if Frienduid is not a friend of user then stop request
+                if(!doc.data().Friends.includes(Frienduid)){
+                    return Promise.reject("Unauthorized");
+                }
+            }).then(()=>{
+                return ChatRef.doc(Chatid).update({
+                    ChatMemberIDs: FieldValue.arrayUnion(Frienduid),
+                    ChatEntries: FieldValue.arrayUnion({uid: uid, message: Frienduid, timestamp: Date.now(), type: 0})
+                });
+            }).then(()=>{
+                return Promise.all([
+                    ChatData.ChatName,
+                    getUsernames(ChatData.ChatMemberIDs, userDataRef),
+                ])
+            }).then((val) => {
+                return {
+                    name: val[0], 
+                    id: Chatid, 
+                    members: val[1]
+                }
+            }).then((newchat) => {
+                io.to(Frienduid).emit('newChat', newchat);
+                getUsernames([uid, Frienduid], userDataRef).then((users)=>{
+                    io.to(ChatData.ChatMemberIDs).emit('UpdateChatUsers', {Chatid: Chatid, NewUser: users[1]})
+                    io.to(Chatid).emit('RecieveMessage', {sender: users[0], message: users[1].Username, timestamp: Date.now(), type: 0});
+                })
+            }).catch((err) => {
+                console.log(err);
+            })
+        })
+    })
+
+    function AcceptFriendReq(AcceptedUser){
+        const UserDataRef = db.collection("UserData");
+
+        const currentUserDoc = UserDataRef.doc(uid);
+        const acceptedUserDoc = UserDataRef.doc(AcceptedUser);
+
+        currentUserDoc.get().then(val => { //check if there is a friend request from the supposed user to the current user
+            if(!val.data().FriendRequests.includes(AcceptedUser)){
+                return Promise.reject('Unauthorized');
+            }
+        }).then(()=>{
+            return Promise.all([
                 currentUserDoc.update({
                     FriendRequests: FieldValue.arrayRemove(AcceptedUser),
-                }).then(()=>{
-                    return Promise.all([
-                        acceptedUserDoc.update({
-                            Friends: FieldValue.arrayUnion(uid),
-                        }),
-                        currentUserDoc.update({
-                            Friends: FieldValue.arrayUnion(AcceptedUser),
-                        }),
-                    ])
-                }).then(()=>{
-                    return Promise.all([
-                        acceptedUserDoc.get().then((val)=>{
-                            return val.data().Username;
-                        }),
-                        currentUserDoc.get().then((val)=>{
-                            return val.data().Username;
-                        }),
-                    ])
-                }).then((Usernames)=>{
-                    socket.to(uid).emit("NewFriend", {uid: AcceptedUser, Username: Usernames[0]});
-                    socket.to(AcceptedUser).emit("NewFriend", {uid: uid, Username: Usernames[1]});
+                    Friends: FieldValue.arrayUnion(AcceptedUser)
+                }), 
+                acceptedUserDoc.update({
+                    Friends: FieldValue.arrayUnion(uid),
                 })
-            }
+            ])
+        }).then(()=>{
+            return getUsernames([AcceptedUser, uid], UserDataRef)
+        }).then((Usernames)=>{
+            io.to(uid).emit("NewFriend", {uid: AcceptedUser, Username: Usernames[0]});
+            io.to(AcceptedUser).emit("NewFriend", {uid: uid, Username: Usernames[1]});
         }).catch(err=>{
             console.log(err);
         })
@@ -218,6 +308,8 @@ io.on('connection', (socket) => {
     })
 
     socket.on('AddFriend', ({ FriendEmail }) => {
+        const UserRef = db.collection("UserData");
+
         db.collection('UserData').where('Email', '==', FriendEmail).get().then((querySnapshot) => {
             if(!querySnapshot.empty){
                 const doc = querySnapshot.docs[0];
@@ -225,24 +317,25 @@ io.on('connection', (socket) => {
                 if(doc.id === uid) {
                     return;
                 }
-
-                db.collection("UserData").doc(doc.id).get().then((val)=>{
+                //if user sending the friend request still has an outgoing request or is already friends with 
+                //the target user then prevent from sending another
+                UserRef.doc(doc.id).get().then((val)=>{
                     if(val.data().FriendRequests.includes(uid) || val.data().Friends.includes(uid)){
                         return Promise.reject("Unable to send Friend Request");
                     }
                 }).then(()=>{
-                    return db.collection("UserData").doc(uid).get().then((val) => {
+                    return UserRef.doc(uid).get().then((val) => { //if user sending fq has incoming fq from target then accept fq
                         if(val.data().FriendRequests.includes(doc.id)){
                             AcceptFriendReq(doc.id);
                             return Promise.reject("Accepted Friend Request");
                         }
                     })
                 }).then(()=>{
-                    return db.collection('UserData').doc(doc.id).update({
+                    return UserRef.doc(doc.id).update({
                         FriendRequests: FieldValue.arrayUnion(uid)
                     })
                 }).then(()=>{
-                    return db.collection('UserData').doc(uid).get().then((val)=>{
+                    return UserRef.doc(uid).get().then((val)=>{
                         return val.data().Username;
                     })
                 }).then((Username) => {
@@ -259,7 +352,7 @@ io.on('connection', (socket) => {
             if(data.ChatMemberIDs.includes(uid)) {
                 socket.join(chatID);
             }else{
-                return new Error('Unauthorized');
+                return Promise.reject('Unauthorized');
             }
         }).catch((error) => {
             console.log(error);
@@ -274,17 +367,22 @@ io.on('connection', (socket) => {
 
         if(msg.chatID){
             const chatRef = db.collection('Chats');
+            const UserRef = db.collection('UserData');
+
             chatRef.doc(msg.chatID).get().then((doc) => {  
                 const data = doc.data();
                 if(data.ChatMemberIDs.includes(uid)) {
                     chatRef.doc(msg.chatID).update({
-                        ChatEntries: FieldValue.arrayUnion({uid: uid, message: msg.message, timestamp:  Date.now()})
+                        ChatEntries: FieldValue.arrayUnion({uid: uid, message: msg.message, timestamp: Date.now(), type: 1})
                     });
                 }else{
-                    return new Error('Unauthorized');
+                    return Promise.reject('Unauthorized');
                 }
             }).then(() => {
-                io.to(msg.chatID).emit('RecieveMessage', {uid: uid, message: msg.message, timestamp:  Date.now()});
+                return getUsernames([uid], UserRef)
+                
+            }).then((user) => {
+                io.to(msg.chatID).emit('RecieveMessage', {sender: Username, message: msg.message, timestamp: Date.now(), type: 1});
             }).catch((error) => {
                 console.log(error);
             });
