@@ -76,7 +76,7 @@ app.use((req, res, next) => {
                 next();
             }).catch((error) => {
                 console.log("error")
-                next(new Error('Unauthorized'));
+                next(new Error('Token Error'));
             })
             break;
     }
@@ -110,9 +110,26 @@ app.post('/getChats', (req, res) => {
     });;
 });
 
+function AddUserToMap(uid, map){
+    const UserRef = db.collection('UserData');
+
+    return new Promise((resolve, reject) => {
+        if(!map.has(uid)){ //if user id not in the map then get username from db and store it into map
+            getUsernames([uid], UserRef).then((member) => {
+                map.set(uid, member[0].Username);
+                resolve()
+            }).catch(error=>{
+                reject(error);
+            })
+        }else{
+            resolve()
+        }
+    })
+}
+
 app.post('/getChatMessages', (req, res) => {
     db.collection('Chats').doc(req.body.chatID).get().then(content => {
-        const UserRef = db.collection('UserData');
+        
 
         //if current user not in the chat dont authorize access
         if(!content.data().ChatMemberIDs.includes(req.body.uid)){ 
@@ -120,29 +137,41 @@ app.post('/getChatMessages', (req, res) => {
             return;
         }else{
             const map = new Map() //maps all user ids that show up in message history to a username
-
+            if(!content.data().ChatEntries) return;
             Promise.all(content.data().ChatEntries.map(x => {
-                return new Promise((resolve, reject)=>{
-                    if(!map.has(x.uid)){ //if user id not in the map then get username from db and store it into map
-                        getUsernames([x.uid], UserRef).then((member) => {
-                            map.set(x.uid, member[0].Username);
-                            resolve()
-                        }).catch(error=>{
-                            reject(error)
+                switch(x.type){
+                    case 0:{
+                        return AddUserToMap(x.uid, map).then(()=>{
+                            return AddUserToMap(x.addeduid, map)
+                        }).then(()=>{
+                            return ({
+                                ...x,
+                                uid: null,
+                                addeduid: null,
+                                sender: {
+                                    uid: x.uid,
+                                    Username: map.get(x.uid)
+                                },
+                                added: {
+                                    uid: x.addeduid,
+                                    Username: map.get(x.addeduid)
+                                }
+                            })
                         })
-                    }else{
-                        resolve()
                     }
-                }).then(()=>{
-                    return ({
-                        ...x,
-                        uid: null,
-                        sender: {
-                            uid: x.uid,
-                            Username: map.get(x.uid)
-                        }
-                    })
-                })
+                    case 1:{
+                        return AddUserToMap(x.uid, map).then(()=>{
+                            return ({
+                                ...x,
+                                uid: null,
+                                sender: {
+                                    uid: x.uid,
+                                    Username: map.get(x.uid)
+                                }
+                            })
+                        })
+                    }
+                }
             })).then((ChatEntries)=>{
                 res.send({success: true, ChatMessages: ChatEntries});
             }).catch(error=>{
@@ -183,7 +212,7 @@ io.use((socket, next) => {
         socket.request.headers.uid = result.uid;
         next();
     }).catch((error) => {
-        next(new Error('Unauthorized'));
+        next(new Error('Token Error'));
     })
 });
 
@@ -192,7 +221,7 @@ io.on('connection', (socket) => {
     console.log(`${uid} connected`);
 
     socket.emit('connected');
-
+    
     socket.join(uid);
 
     socket.on('addChat', ({ chat })=>{
@@ -235,11 +264,14 @@ io.on('connection', (socket) => {
         const ChatRef = db.collection('Chats');
         const userDataRef = db.collection('UserData');
 
-        ChatRef.doc(Chatid).get().then((Chatdoc)=>{ //if user is not in the chat prevent adding friend to chat
+        ChatRef.doc(Chatid).get().then((Chatdoc)=>{ 
             const ChatData = Chatdoc.data();
 
-            if(!ChatData.ChatMemberIDs.includes(uid)){
+            if(!ChatData.ChatMemberIDs.includes(uid)){//if user is not in the chat prevent adding friend to chat
                 return Promise.reject('Unauthorized');
+            }
+            if(ChatData.ChatMemberIDs.includes(Frienduid)){
+                return Promise.reject('User Already in Chat')//if Frienduid already in chat stop
             }
             userDataRef.doc(uid).get().then((doc)=>{ //if Frienduid is not a friend of user then stop request
                 if(!doc.data().Friends.includes(Frienduid)){
@@ -248,7 +280,7 @@ io.on('connection', (socket) => {
             }).then(()=>{
                 return ChatRef.doc(Chatid).update({
                     ChatMemberIDs: FieldValue.arrayUnion(Frienduid),
-                    ChatEntries: FieldValue.arrayUnion({uid: uid, message: Frienduid, timestamp: Date.now(), type: 0})
+                    ChatEntries: FieldValue.arrayUnion({uid: uid, addeduid: Frienduid, timestamp: Date.now(), type: 0})
                 });
             }).then(()=>{
                 return Promise.all([
@@ -265,11 +297,13 @@ io.on('connection', (socket) => {
                 io.to(Frienduid).emit('newChat', newchat);
                 getUsernames([uid, Frienduid], userDataRef).then((users)=>{
                     io.to(ChatData.ChatMemberIDs).emit('UpdateChatUsers', {Chatid: Chatid, NewUser: users[1]})
-                    io.to(Chatid).emit('RecieveMessage', {sender: users[0], message: users[1].Username, timestamp: Date.now(), type: 0});
+                    io.to(Chatid).emit('RecieveMessage', {sender: users[0], added: users[1], timestamp: Date.now(), type: 0});
                 })
             }).catch((err) => {
                 console.log(err);
             })
+        }).catch(err => {
+            console.log(err)
         })
     })
 
@@ -382,7 +416,7 @@ io.on('connection', (socket) => {
                 return getUsernames([uid], UserRef)
                 
             }).then((user) => {
-                io.to(msg.chatID).emit('RecieveMessage', {sender: Username, message: msg.message, timestamp: Date.now(), type: 1});
+                io.to(msg.chatID).emit('RecieveMessage', {sender: user[0], message: msg.message, timestamp: Date.now(), type: 1});
             }).catch((error) => {
                 console.log(error);
             });

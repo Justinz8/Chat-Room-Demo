@@ -2,18 +2,18 @@ import "./Friends.css";
 
 import { User } from "../../interfaces";
 
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 
 import { useSocket } from "../../CustomHooks";
 
-interface props{
-  FriendRequests: User[]
-}
+import { getFriendReqContext } from "../../GlobalContextProvider";
 
-export default function PopupFriends(props: props) {
+export default function PopupFriends() {
   const [FriendsPopup, SetFriendsPopup] = useState(false);
 
   const [FriendEmail, SetFriendEmail] = useState("");
+
+  const [FriendRequests, ] = useContext(getFriendReqContext());
 
   const socket = useSocket();
 
@@ -34,7 +34,7 @@ export default function PopupFriends(props: props) {
     }
   }
 
-  const styledRequests = props.FriendRequests.map((x: User) => (
+  const styledRequests = FriendRequests.map((x: User) => (
     <div>
       <h3>{x.Username}</h3>
       <button onClick={()=>{AcceptFriendReq(x.uid);}}>Accept</button>

@@ -12,9 +12,11 @@ export interface SocketProviderContext{
 }
 
 export interface Message{
-    message: string,
+    message?: string,
+    added?: User,
     timestamp: number,
-    sender: User
+    sender: User,
+    type: number
 }
 
 export interface Chat{

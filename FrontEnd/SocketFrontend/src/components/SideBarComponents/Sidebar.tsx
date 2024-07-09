@@ -8,19 +8,16 @@ import { auth } from "../../firebase";
 import ChatCard from "./ChatCard";
 import PopupFriends from "../Popup/PopupFriends";
 
-import { User, Chat } from "../../interfaces";
+import { Chat } from "../../interfaces";
 
-import { useSocket } from "../../CustomHooks";
+import { useSocket, useFetch } from "../../CustomHooks";
 
 import AddChat from "../Popup/AddChat";
 
-interface props{
-  setCurrentChat: (ID: string) => void,
-  FriendRequests: User[],
-}
-
-export default function Sidebar(props: props) {
+export default function Sidebar() {
   const [chats, setChats] = useState<Chat[]>([]);
+
+  const Fetch = useFetch('http://localhost:3000');
 
   const socket = useSocket();
 
@@ -42,29 +39,15 @@ export default function Sidebar(props: props) {
     }
   }, [socket])
 
-  console.log(chats)
-
   function addChatsHelper(chat: Chat){
     setChats(x=>[...x, chat]);
   }
 
   useEffect(() => {
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        user.getIdToken().then((token) => {
-          fetch("http://localhost:3000/getChats", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ token: token }),
-          })
-            .then((response) => response.json())
-            .then((data) => {
-              setChats(data.chats);
-            });
-        });
-      }
+    onAuthStateChanged(auth, () => {
+      Fetch('getChats').then((data) => {
+          setChats(data.chats);
+      });
     });
   }, []);
 
@@ -72,7 +55,6 @@ export default function Sidebar(props: props) {
     <ChatCard
       key={x.id}
       chatDetails = {x}
-      setCurrentChat={props.setCurrentChat}
     />
   ));
 
@@ -88,9 +70,7 @@ export default function Sidebar(props: props) {
       <button className="Sidebar-Logout" onClick={logoutHandler}>
         Logout
       </button>
-      <PopupFriends
-        FriendRequests={props.FriendRequests}
-      />
+      <PopupFriends />
       <AddChat addChatsHelper={addChatsHelper}/>
     </div>
   );

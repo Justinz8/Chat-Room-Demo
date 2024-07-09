@@ -29,6 +29,7 @@ export default function ChatWindow() {
   useEffect(() => {
     if (socket) {
       socket.on(`RecieveMessage`, (message: Message) => {
+        console.log(message);
         SetCurrentMessages((x) => [...x, message]);
       });
     }
@@ -63,19 +64,18 @@ export default function ChatWindow() {
   const messages = currentMessages.map((message: Message, index: number) => {
     let merge = false;
 
-    if (index - 1 >= 0 && message.sender.uid === currentMessages[index - 1]?.sender.uid) {
+    if (message.type===1 && index - 1 >= 0 && message.sender.uid === currentMessages[index - 1]?.sender.uid) {
       merge = true;
     }
 
     return (
       <MessageCard
-        sender={message.sender}
-        message={message.message}
-        time={new Date(message.timestamp).toUTCString()}
+        message={message}
         merge={merge}
         key={index}
       />
     );
+    
   });
 
   return (
