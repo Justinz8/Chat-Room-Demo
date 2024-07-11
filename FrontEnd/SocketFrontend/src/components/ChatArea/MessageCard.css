@@ -12,11 +12,16 @@
     color: gray;
 }
 
-.MessageCard-Username{
+.MessageCard-Title{
     font-size: 20px;
     color: black;
     margin: 0;
     margin-top: 10px;
+}
+
+.MessageCard-Username:hover{
+    cursor: pointer;
+    text-decoration: underline;
 }
 
 .MessageCard-Message{

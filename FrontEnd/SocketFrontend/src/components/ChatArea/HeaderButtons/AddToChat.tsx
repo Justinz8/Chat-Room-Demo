@@ -1,26 +1,33 @@
 import './AddToChat.css'
 
-import { User } from '../../../interfaces';
-
 import { useState, useContext } from 'react'
 
 import { useSocket } from '../../../CustomHooks';
 
-import { getChatIDContext, getFriendsContext } from '../../../GlobalContextProvider';
+import { getChatContext, getFriendsContext } from '../../../GlobalContextProvider';
+
+import { useLoadedUserGetter } from '../../../CustomHooks';
 
 export default function AddToChat(){
 
+    const {getLoadedUser} = useLoadedUserGetter();
+
     const [ToggleAddToChat, SetToggleAddToChat] = useState<boolean>(false);
     const [AddToChat, SetAddToChat] = useState<string>("");
-    const [currentChatID, ] = useContext(getChatIDContext());
-    const [Friends, ] = useContext(getFriendsContext());
+    const {currentChat, } = useContext(getChatContext());
+    const {Friends, } = useContext(getFriendsContext());
 
     const socket = useSocket();
 
-    const AddToChatUserOptions = Friends.map((x:User) => {
+    const AddToChatUserOptions = Friends.map((x:string) => {
+
+        const user = getLoadedUser(x) //need to make sure this stays true
+
+        const Username = typeof(user) === "string" ? x : user.User.Username
+
         return (
-            <option value={x.uid}>
-                {x.Username}
+            <option value={x}>
+                {Username}
             </option>
         )
     })
@@ -29,7 +36,7 @@ export default function AddToChat(){
         e.preventDefault()
 
         if(socket){
-            socket.emit('AddUserToChat', {Frienduid: AddToChat, Chatid: currentChatID})
+            socket.emit('AddUserToChat', {Frienduid: AddToChat, Chatid: currentChat.id})
         }
     }
 

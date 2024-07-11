@@ -1,10 +1,10 @@
 
-import { Chat, User } from "../../interfaces";
+import { Chat, KnownUser } from "../../interfaces";
 
 import { useContext } from "react";
 import { useSocket } from "../../CustomHooks";
 
-import { getChatIDContext } from "../../GlobalContextProvider";
+import { getChatContext } from "../../GlobalContextProvider";
 interface props{
   chatDetails: Chat
 }
@@ -13,27 +13,27 @@ export default function ChatCard(props: props) {
 
   const socket = useSocket();
 
-  const [currentChatID, setCurrentChatID] = useContext(getChatIDContext());
+  const {currentChat, SetCurrentChat} = useContext(getChatContext());
 
-  function setCurrentChat(ID: string) {
-    if (currentChatID === ID) return;
+  function JoinCurrentChat(ID: string) {
+    if (currentChat.id === ID) return;
     if(socket){
-      socket.emit("leaveRoom", currentChatID);
+      if(currentChat.id) socket.emit("leaveRoom", currentChat.id);
       socket.emit("joinRoom", ID);
     }
-    setCurrentChatID(ID);
+    SetCurrentChat(props.chatDetails);
   }
 
   return (
     <button
       className="ChatCard-Wrapper"
       onClick={() => {
-        setCurrentChat(props.chatDetails.id);
+        JoinCurrentChat(props.chatDetails.id);
       }}
     >
       <h1 className="ChatCard-Name">{props.chatDetails.name}</h1>
       <p className="ChatCard-Members">
-        {props.chatDetails.members.map((x: User) => x.Username).toString()}
+        {`${props.chatDetails.members.length} Members`}
       </p>
     </button>
   );

@@ -1,6 +1,5 @@
-import { User } from "../../interfaces"
 import { useState, useEffect, useContext } from "react"
-import { useSocket } from "../../CustomHooks"
+import { useSocket, useLoadedUserGetter } from "../../CustomHooks"
 import './AddChat.css'
 
 import { Chat } from "../../interfaces"
@@ -13,7 +12,7 @@ interface props{
 
 interface AddChatForm{
     Name: string,
-    Friends: User[]
+    Friends: string[]
 }
 
 
@@ -26,7 +25,9 @@ export default function AddChat(props: props){
 
     const socket = useSocket();
 
-    const [Friends, ] = useContext(getFriendsContext());
+    const {Friends, } = useContext(getFriendsContext());
+
+    const {getLoadedUser} = useLoadedUserGetter();
 
     function AddChatNameFormHandler(e: React.ChangeEvent<HTMLInputElement>){
         SetAddChatForm(x => {
@@ -37,7 +38,7 @@ export default function AddChat(props: props){
         })
     }
 
-    function AddChatFormAddFriendHandler(Friend: User){
+    function AddChatFormAddFriendHandler(Friend: string){
         SetAddChatForm(x => {
             if(x.Friends.includes(Friend)){
                 return x;
@@ -49,24 +50,28 @@ export default function AddChat(props: props){
         })
     }
 
-    const FriendOptions = Friends.map((x:User) => {
+    const FriendOptions = Friends.map((x:string) => {
+
+        const user = getLoadedUser(x);
+
+        const Username = typeof(user) === "string" ? x : user.User.Username
+
         return (
-            <option onClick={()=>{AddChatFormAddFriendHandler(x)}} key={x.uid}>
-                {x.Username}
+            <option onClick={()=>{AddChatFormAddFriendHandler(x)}} key={x}>
+                {Username}
             </option>
         )
     })
 
     function RemoveFriend(uid: string){
         SetAddChatForm(x => {
-            const newFriends: User[] = []
+            const newFriends: string[] = []
 
             x.Friends.forEach(friend => {
-                if(friend.uid !== uid){
+                if(friend !== uid){
                     newFriends.push(friend);
                 }
             })
-
 
             return {
                 ...x,
@@ -75,12 +80,17 @@ export default function AddChat(props: props){
         })
     }
 
-    const AddedFriends = AddChatForm.Friends.map((x: User) => {
+    const AddedFriends = AddChatForm.Friends.map((x: string) => {
+
+        const user = getLoadedUser(x);
+
+        const Username = typeof(user) === "string" ? x : user.User.Username
+
         return (
-            <li key={x.uid}>
+            <li key={x}>
                 <div>
-                    <p>{x.Username}</p>
-                    <button onClick={()=>{RemoveFriend(x.uid)}}>Remove</button>
+                    <p>{Username}</p>
+                    <button onClick={()=>{RemoveFriend(x)}}>Remove</button>
                 </div>
                 
             </li>
@@ -103,7 +113,7 @@ export default function AddChat(props: props){
             socket.emit('addChat', {
                 chat: {
                     name: AddChatForm.Name,
-                    members: AddChatForm.Friends.map(x => x.uid),
+                    members: AddChatForm.Friends,
                 }
             })
             SetAddChatForm({

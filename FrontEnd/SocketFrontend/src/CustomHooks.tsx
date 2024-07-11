@@ -1,5 +1,7 @@
 import { Socket, io } from "socket.io-client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext, useCallback } from "react";
+import { getLoadedUserContext } from "./GlobalContextProvider";
+import { KnownUser } from "./interfaces";
 import { auth } from "./firebase";
 import { useMemo } from "react";
 
@@ -9,21 +11,28 @@ export function useSocket(){
     const [Socket, SetSocket] = useState<Socket | null>(null);
 
     useEffect(()=>{
-        auth.onIdTokenChanged(()=>{
-            if(auth.currentUser){
-                auth.currentUser.getIdToken().then((token: string) => {
-                    if(sharedSocket && token === (sharedSocket?.auth as { [key: string]: any })["token"]) return;
+        auth.onIdTokenChanged((user)=>{
+            if(user){
+                user.getIdToken().then(accessToken => {
+                    if(sharedSocket && accessToken === (sharedSocket?.auth as { [key: string]: any })["token"]) return;
+                    if(sharedSocket) {
+                        sharedSocket.disconnect();
+                        sharedSocket = null;
+                    }
                     sharedSocket = io("http://localhost:3000", {
                         auth:{
-                            token: token,
+                            token: accessToken,
                         }
                     })
-                }).then(() => {
+                }).then(()=>{
                     SetSocket(sharedSocket);
                 })
+
+               
             }else{
                 if(sharedSocket){
                     sharedSocket.disconnect();
+                    sharedSocket = null;
                 }
                 SetSocket(null);
             }
@@ -67,4 +76,39 @@ export function useFetch(url: string){
 
 
     return FetchValue
+}
+
+export function useLoadedUserGetter(){
+    const {LoadedUsers, SetLoadedUsers} = useContext(getLoadedUserContext());
+
+    const UpdateLoadedUser = useCallback((uid: string, user: KnownUser): void => {
+        SetLoadedUsers(x => {
+            if(!x.has(uid)){
+                const newLoadedUsers = new Map(x);
+                newLoadedUsers.set(uid, user);
+                return newLoadedUsers;
+            }else{
+                return x;
+            }
+        })
+    }, [SetLoadedUsers]);
+
+    const getLoadedUser = useCallback((uid: string): string | KnownUser => {
+        const user = LoadedUsers.get(uid);
+
+        if(!user){
+            return uid;
+        }
+
+        return user;
+    }, [LoadedUsers])
+
+    const useLoadedUserGetterValue = useMemo(()=>{
+        return {
+            UpdateLoadedUser,
+            getLoadedUser
+        }
+    }, [UpdateLoadedUser, getLoadedUser])
+
+    return useLoadedUserGetterValue;
 }

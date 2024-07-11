@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import Sidebar from "./components/SideBarComponents/Sidebar";
 import PopupAuth from "./components/Popup/PopupAuth";
 import ChatWindow from "./components/ChatArea/ChatWindow";
+import UsersBar from "./UsersBarComponents/UsersBar";
 
 import { useSocket } from "./CustomHooks";
 
@@ -26,8 +27,6 @@ function App() {
 
   const socket = useSocket();
 
-
-  
   useEffect(() => {
     if (socket) {
       socket.on("connect_error", (err: Error) => {
@@ -46,6 +45,7 @@ function App() {
         <>
           <Sidebar />
           <ChatWindow/>
+          <UsersBar />
         </>
       );
     } else if (loggedIn === -1) {
@@ -55,6 +55,5 @@ function App() {
 
   return <div className="Main-Wrapper">{loadFunction()}</div>
 }
-
 
 export default App;

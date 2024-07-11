@@ -10,7 +10,7 @@ export default function MessageCard(props: props) {
 
   function FormattedMessage(){
     const {timestamp, sender, message, added, type} = props.message;
-    const formattedtimestamp = new Date(timestamp).toUTCString();
+    const formattedtimestamp = new Date(timestamp).toLocaleString();
     const merge = props.merge;
 
     switch (type){
@@ -25,8 +25,8 @@ export default function MessageCard(props: props) {
         return (
           <>
             {!merge && (
-              <p className="MessageCard-Username">
-                {sender.Username + " "}
+              <p className="MessageCard-Title">
+                <span className="MessageCard-Username">{sender.Username + " "}</span>
                 <span className="MessageCard-TimeText">{formattedtimestamp}</span>
               </p>
             )}

@@ -6,6 +6,11 @@ export interface User{
     Username: string
 }
 
+export interface KnownUser{
+    User: User,
+    Status: number //1 is online, 0 is offline
+}
+
 export interface SocketProviderContext{
     socket: Socket,
     SetSocket: (value: Socket) => void
@@ -22,7 +27,7 @@ export interface Message{
 export interface Chat{
     name: string,
     id: string,
-    members: User[]
+    members: string[]
 }
 
 export interface UserCredentialsObject{

@@ -98,7 +98,19 @@ app.post('/getChats', (req, res) => {
                 return {
                     name: data.ChatName, 
                     id: doc.id, 
-                    members: members
+                    members: members.map(x => {
+                        if(io.sockets.adapter.rooms.get(x.uid)){
+                            return {
+                                User: x,
+                                Status: 1
+                            }
+                        }else{
+                            return {
+                                User: x,
+                                Status: 0
+                            }
+                        }
+                    })
                 };
             });
         }));
@@ -193,9 +205,13 @@ app.post('/getUserData', (req, res) => { //returns all immediately relevent info
                         })})),
             Promise.all(doc1.data().Friends.map(x => {
                 return db.collection('UserData').doc(x).get().then(doc2 => {
+                    const Status = io.sockets.adapter.rooms.get(x) ? 1 : 0
                     return {
-                        uid: x,
-                        Username: doc2.data().Username
+                        User: {
+                            uid: x,
+                            Username: doc2.data().Username
+                        },
+                        Status: Status
                     }
                 })
             })),
@@ -219,6 +235,48 @@ io.use((socket, next) => {
 io.on('connection', (socket) => {
     const uid = socket.request.headers.uid;
     console.log(`${uid} connected`);
+
+    /*
+    If there are no other instances of a user connected to socket then alert all currently online friends
+    that this user is now online.
+    */
+
+    const ChatRef = db.collection("Chats")
+
+    ChatRef.where('chatMememberIDs', 'array-contains', uid).get().then(docs => {
+        docs.forEach(doc => {
+            io.to(doc.id).emit("UserOnline", uod)
+        })
+    })
+
+    if(!io.sockets.adapter.rooms.get(uid)){
+        const UserRef = db.collection("UserData");
+        
+        UserRef.doc(uid).get().then(doc => {
+            io.to(doc.data().Friends).emit("UserOnline", uid);
+        })
+    }
+
+    /* 
+    If there are no other instances of this user online then alert 
+    */
+
+    socket.on('disconnect', function () {
+        const UserRef = db.collection("UserData");
+        const ChatRef = db.collection("Chats")
+
+        ChatRef.where('chatMememberIDs', 'array-contains', uid).get().then(docs => {
+            docs.forEach(doc => {
+                io.to(doc.id).emit("UserOffline", uod)
+            })
+        })
+
+        if(!io.sockets.adapter.rooms.get(uid)){            
+            UserRef.doc(uid).get().then(doc => {
+                io.to(doc.data().Friends).emit("UserOffline", uid);
+            })
+        }
+    });
 
     socket.emit('connected');
     
@@ -251,7 +309,19 @@ io.on('connection', (socket) => {
             return {
                 name: chat.name, 
                 id: val[1], 
-                members: val[0]
+                members: val[0].map(x => {
+                    if(io.sockets.adapter.rooms.get(x.uid)){
+                        return {
+                            User: x,
+                            Status: 1
+                        }
+                    }else{
+                        return {
+                            User: x,
+                            Status: 0
+                        }
+                    }
+                })
             };
         }).then((newchat)=>{
             io.to(ChatMemberIDs).emit('newChat', newchat)
@@ -259,6 +329,8 @@ io.on('connection', (socket) => {
             console.log(error);
         })
     })
+
+
 
     socket.on('AddUserToChat', ({ Frienduid, Chatid }) =>{
         const ChatRef = db.collection('Chats');
@@ -285,18 +357,36 @@ io.on('connection', (socket) => {
             }).then(()=>{
                 return Promise.all([
                     ChatData.ChatName,
-                    getUsernames(ChatData.ChatMemberIDs, userDataRef),
+                    getUsernames([...ChatData.ChatMemberIDs, Frienduid], userDataRef),
                 ])
             }).then((val) => {
                 return {
                     name: val[0], 
                     id: Chatid, 
-                    members: val[1]
+                    members: val[1].map(x => {
+                        if(io.sockets.adapter.rooms.get(x.uid)){
+                            return {
+                                User: x,
+                                Status: 1
+                            }
+                        }else{
+                            return {
+                                User: x,
+                                Status: 0
+                            }
+                        }
+                    })
                 }
             }).then((newchat) => {
                 io.to(Frienduid).emit('newChat', newchat);
                 getUsernames([uid, Frienduid], userDataRef).then((users)=>{
-                    io.to(ChatData.ChatMemberIDs).emit('UpdateChatUsers', {Chatid: Chatid, NewUser: users[1]})
+                    io.to(ChatData.ChatMemberIDs).emit('UpdateChatUsers', {
+                        Chatid: Chatid, 
+                        NewUser: {
+                            User: users[1],
+                            Status: io.sockets.adapter.rooms.get(users[1].uid) ? 1 : 0
+                        }
+                    })
                     io.to(Chatid).emit('RecieveMessage', {sender: users[0], added: users[1], timestamp: Date.now(), type: 0});
                 })
             }).catch((err) => {
@@ -329,9 +419,16 @@ io.on('connection', (socket) => {
             ])
         }).then(()=>{
             return getUsernames([AcceptedUser, uid], UserDataRef)
-        }).then((Usernames)=>{
-            io.to(uid).emit("NewFriend", {uid: AcceptedUser, Username: Usernames[0]});
-            io.to(AcceptedUser).emit("NewFriend", {uid: uid, Username: Usernames[1]});
+        }).then((Users)=>{
+            const NewFriendStatus = io.sockets.adapter.rooms.get(Users[0].uid)
+            io.to(uid).emit("NewFriend", {
+                User: Users[0],
+                Status: NewFriendStatus
+            });
+            io.to(AcceptedUser).emit("NewFriend", {
+                User: User[1],
+                Status: 1
+            });
         }).catch(err=>{
             console.log(err);
         })
@@ -381,6 +478,7 @@ io.on('connection', (socket) => {
 
     socket.on('joinRoom', (chatID) => {
         const chatRef = db.collection('Chats');
+
         chatRef.doc(chatID).get().then((doc) => {
             const data = doc.data();
             if(data.ChatMemberIDs.includes(uid)) {
@@ -398,7 +496,6 @@ io.on('connection', (socket) => {
     })
 
     socket.on('SendMessage', (msg) => {
-
         if(msg.chatID){
             const chatRef = db.collection('Chats');
             const UserRef = db.collection('UserData');

@@ -11,14 +11,14 @@ import { Message } from "../../interfaces";
 import { useFetch } from "../../CustomHooks";
 
 import { useContext } from "react";
-import { getChatIDContext } from "../../GlobalContextProvider";
+import { getChatContext } from "../../GlobalContextProvider";
 
 import ChatWindowHeader from "./ChatWindowHeader";
 
 export default function ChatWindow() {
   const socket = useSocket();
 
-  const [currentChatID] = useContext(getChatIDContext());
+  const {currentChat, } = useContext(getChatContext());
 
   const [message, SetMessage] = useState("");
 
@@ -39,14 +39,14 @@ export default function ChatWindow() {
   }, [socket]);
 
   useEffect(() => {
-    if (currentChatID) {
+    if (currentChat.id) {
       Fetch('getChatMessages', {
-        chatID: currentChatID,
+        chatID: currentChat.id,
       }).then((data) => {
         SetCurrentMessages(data.ChatMessages);
       });
     }
-  }, [currentChatID]);
+  }, [currentChat.id]);
 
   function messageChange(e: React.ChangeEvent<HTMLInputElement>) {
     SetMessage(e.target.value);
@@ -54,13 +54,14 @@ export default function ChatWindow() {
 
   function submitMessage(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    console.log(socket)
     if(socket){
-      socket.emit(`SendMessage`, { message: message, chatID: currentChatID });
+      socket.emit(`SendMessage`, { message: message, chatID: currentChat.id });
     }
     
     SetMessage("");
   }
-
+  //TODO: make this use global map too
   const messages = currentMessages.map((message: Message, index: number) => {
     let merge = false;
 
@@ -81,9 +82,10 @@ export default function ChatWindow() {
   return (
     <div className="ChatWindow-Wrapper">
       <ChatWindowHeader />
-      <div className="ChatWindow-Content"></div>
+      <div className="ChatWindow-Content">
+        {messages.reverse()}
+      </div>
       <form className="TypeBar" onSubmit={submitMessage}>
-        {messages}
         <input type="text" onChange={messageChange} value={message} />
         <button>Send</button>
       </form>
