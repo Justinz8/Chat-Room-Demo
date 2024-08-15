@@ -1,0 +1,70 @@
+import express from 'express'
+
+const app = express();
+
+import cors from 'cors';
+import http from 'http';
+
+const server = http.createServer(app);
+
+import { Server } from 'socket.io';
+
+const io = new Server(server, {cors: {origin: "*"}});
+
+import admin from 'firebase-admin';
+
+import { getFirestore } from 'firebase-admin/firestore';
+
+import serviceAccount from "./fir-test-5bb7c-firebase-adminsdk-f38j5-05e81d9be2.json";
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+  databaseURL: process.env.databaseURL
+});
+
+const db = getFirestore();
+
+const port = 3000;
+
+app.use(express.json());
+
+app.use(cors({origin: '*'}));
+
+app.use((req, res, next) => {
+    switch(req.url){
+        case "/SignUpInit":
+            next();
+            break;
+        default:
+            admin.auth().verifyIdToken(req.body.token, true).then((result) => {
+                req.body.uid = result.uid;
+                next();
+            }).catch((error) => {
+                console.log("error")
+                next(new Error('Token Error'));
+            })
+            break;
+    }
+});
+
+io.use((socket, next) => {
+    if(!socket.handshake.auth.token) return;
+    admin.auth().verifyIdToken(socket.handshake.auth.token, true).then((result) => {
+        socket.request.headers.uid = result.uid;
+        next();
+    }).catch((error) => {
+        next(new Error('Token Error'));
+    })
+});
+
+require('./Express Endpoints/InitEndpoints')(app, db, io)
+
+io.on('connection', (socket) => {
+    require('./SocketIO/SocketInit')(db, socket, io)
+    require('./SocketIO/ChatEndpoints')(db, socket, io)
+    require('./SocketIO/FriendEndpoints')(db, socket, io)
+});
+
+server.listen(port, () => {
+    console.log(`listening on port:${port}`);
+});

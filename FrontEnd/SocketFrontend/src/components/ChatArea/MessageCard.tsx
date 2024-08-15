@@ -1,5 +1,8 @@
 import "./MessageCard.css";
 
+import Popup from 'reactjs-popup';
+import UserActionPopup from "../Popup/UserActionPopup";
+
 import { Message } from "../../interfaces";
 interface props{
   message: Message,
@@ -9,11 +12,25 @@ interface props{
 export default function MessageCard(props: props) {
 
   function FormattedMessage(){
-    const {timestamp, sender, message, added, type} = props.message;
+    const {timestamp, sender, message, added, removed, type} = props.message;
     const formattedtimestamp = new Date(timestamp).toLocaleString();
     const merge = props.merge;
 
     switch (type){
+      case -2:{
+        return (
+          <>
+            <p>{`${sender.Username} left the chat at ${formattedtimestamp}`}</p>
+          </>
+        )
+      }
+      case -1:{
+        return (
+          <>
+            <p>{`${sender.Username} removed ${removed?.Username} at ${formattedtimestamp}`}</p>
+          </>
+        )
+      }
       case 0: {
         return (
           <>
@@ -26,7 +43,17 @@ export default function MessageCard(props: props) {
           <>
             {!merge && (
               <p className="MessageCard-Title">
-                <span className="MessageCard-Username">{sender.Username + " "}</span>
+                <Popup 
+                  trigger={
+                    <span className="MessageCard-Username">
+                      {sender.Username + " "}
+                    </span>
+                  }
+                  position={['right top', 'right bottom']}
+                  keepTooltipInside='.ChatWindow-Content'>
+                  <UserActionPopup uid={sender.uid} chatOptions={true}/>
+                </Popup>
+                
                 <span className="MessageCard-TimeText">{formattedtimestamp}</span>
               </p>
             )}

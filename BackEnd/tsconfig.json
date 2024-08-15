@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+        "outDir": "./built",
+        "allowJs": true,
+        "target": "es5",
+        "resolveJsonModule": true,
+        "esModuleInterop": true
+    },
+    "include": ["./**/*"], // Update the path to your TypeScript files
+    "files": ["./index.ts"] // Add the path to your main TypeScript file here
+}

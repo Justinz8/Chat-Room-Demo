@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import Sidebar from "./components/SideBarComponents/Sidebar";
 import PopupAuth from "./components/Popup/PopupAuth";
 import ChatWindow from "./components/ChatArea/ChatWindow";
-import UsersBar from "./UsersBarComponents/UsersBar";
+import UsersBar from "./components/UsersBarComponents/UsersBar";
 
 import { useSocket } from "./CustomHooks";
 

@@ -3,5 +3,11 @@
     left: 50%;
     top: 50%;
     transform: translate(-50%, -40%);
+    z-index: 100000;
     background-color: white;
+}
+
+.AddToChat-Toggle-Body{
+    position: relative;
+    z-index: 100000;
 }

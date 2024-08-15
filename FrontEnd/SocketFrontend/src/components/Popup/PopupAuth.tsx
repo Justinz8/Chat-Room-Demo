@@ -35,10 +35,8 @@ export default function PopupAuth() {
       Password: userCredentials.Password
     }).then(()=>{
       signInWithEmailAndPassword(auth, userCredentials.Email, userCredentials.Password)
-    }).catch((error) => {
-      const errorCode = error;
-      const errorMessage = error.message;
-      console.log(errorCode, errorMessage);
+    }).catch((err) => {
+      console.log(err);
     });
 
   }
@@ -50,10 +48,8 @@ export default function PopupAuth() {
       auth,
       userCredentials.Email,
       userCredentials.Password
-    ).catch((error) => {
-      const errorCode = error;
-      const errorMessage = error.message;
-      console.log(errorCode, errorMessage);
+    ).catch((err) => {
+      console.log(err);
     });
   }
 

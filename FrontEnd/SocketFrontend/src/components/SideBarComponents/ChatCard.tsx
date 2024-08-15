@@ -1,5 +1,5 @@
 
-import { Chat, KnownUser } from "../../interfaces";
+import { Chat } from "../../interfaces";
 
 import { useContext } from "react";
 import { useSocket } from "../../CustomHooks";

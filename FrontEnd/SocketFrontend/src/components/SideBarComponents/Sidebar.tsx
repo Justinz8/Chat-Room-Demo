@@ -28,7 +28,6 @@ export default function Sidebar() {
       socket.on('UpdateChatUsers', ({Chatid, NewUser})=>{
 
         UpdateLoadedUser(NewUser.User.uid, NewUser);
-
         setChats(x => {
           return x.map(chat => {
             if(chat.id === Chatid){
@@ -41,10 +40,30 @@ export default function Sidebar() {
           })
         })
       })
+
+      socket.on('DecreaseMemberCount', ({ uid, chatID}) => {
+          setChats(x => {
+            return x.map(chat => {
+              if(chat.id === chatID){
+                return {
+                  ...chat,
+                  members: [...chat.members].filter(member => member !== uid)
+                }
+              }
+              return chat
+            })
+          })
+      })
+
+      socket.on('RevokeChatPerm', (chatID: string)=>{
+        setChats(x => {
+          return x.filter(chat => {
+            return chat.id != chatID
+          })
+        })
+      })
     }
   }, [socket])
-
-  console.log(chats)
 
   function addChatsHelper(chat: Chat){
     setChats(x=>[...x, chat]);

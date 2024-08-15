@@ -2,9 +2,12 @@ import './UsersBar.css'
 
 import { useContext } from 'react'
 
-import { getChatContext } from '../GlobalContextProvider'
+import Popup from 'reactjs-popup';
+import UserActionPopup from '../Popup/UserActionPopup';
 
-import { useLoadedUserGetter } from '../CustomHooks';
+import { getChatContext } from '../../GlobalContextProvider'
+
+import { useLoadedUserGetter } from '../../CustomHooks';
 
 export default function UsersBar(){
 
@@ -12,7 +15,6 @@ export default function UsersBar(){
 
     const {currentChat, } = useContext(getChatContext());
 
-    console.log(currentChat)
     const styledMembers = currentChat.members.map(x => {
 
         const user = getLoadedUser(x);
@@ -20,10 +22,20 @@ export default function UsersBar(){
         const Status = (typeof(user) === "string") ? -1 : user.Status;
 
         const Username = (typeof(user) === "string") ? x : user.User.Username
+        const uid = (typeof(user) === "string") ? x : user.User.uid
         
         return (
             <div>
-                <p>{Username}</p>
+                <Popup 
+                  trigger={
+                    <span className="UsersBar-Username">
+                      {Username}
+                    </span>
+                  }
+                  position={['left top', 'left bottom']}
+                  keepTooltipInside='body'>
+                  <UserActionPopup uid={uid} chatOptions={true}/>
+                </Popup>
                 <p>{Status}</p>
             </div>
         )

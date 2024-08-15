@@ -16,8 +16,8 @@ interface ChatContextType{
 }
 
 interface FriendsContextType{
-    Friends: string[],
-    SetFriends: React.Dispatch<React.SetStateAction<string[]>>
+    Friends: Set<string>,
+    SetFriends: React.Dispatch<React.SetStateAction<Set<string>>>
 }
 
 interface FriendReqContextType{
@@ -45,9 +45,10 @@ export function GlobalContextWrapper(props:props){
     const [currentChat, SetCurrentChat] = useState<Chat>({
         name: "",
         id: "",
+        owner: "",
         members: []
     });
-    const [Friends, SetFriends] = useState<string[]>([]);
+    const [Friends, SetFriends] = useState<Set<string>>(new Set());
     const [FriendRequests, SetFriendRequests] = useState<User[]>([]);
 
     const [LoadedUsers, SetLoadedUsers] = useState<Map<string, KnownUser>>(new Map<string, KnownUser>());
@@ -92,10 +93,9 @@ export function GlobalContextWrapper(props:props){
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 Fetch('getUserData').then((data) => {
-                    console.log(data)
                     SetFriendRequests(data.requests);
 
-                    const friendsString:string[] = []
+                    const friendsString = new Set<string>()
 
                     data.friends.forEach(x => {
                         if(!LoadedUsers.has(x.User.uid)){
@@ -105,9 +105,8 @@ export function GlobalContextWrapper(props:props){
                                 return NewLoadedUsers;
                             })
                         }
-                        friendsString.push(x.User.uid)
+                        friendsString.add(x.User.uid)
                     })
-
                     SetFriends(friendsString);
                 });
             }
@@ -120,7 +119,19 @@ export function GlobalContextWrapper(props:props){
                 SetFriendRequests((x: User[]) => [...x, User])
             });
 
+            socket.on("RemoveFriend", (uid: string) => {
+                SetFriends(x => {
+                    if(!x.has(uid)) return x;
+
+                    const newFriendsList = new Set(x);
+                    newFriendsList.delete(uid);
+                    
+                    return newFriendsList;
+                })
+            })
+
             socket.on("NewFriend", (User: KnownUser) => {
+
                 if(!LoadedUsers.has(User.User.uid)){
                     SetLoadedUsers(x => {
                         const newLoaded = new Map(x);
@@ -128,7 +139,20 @@ export function GlobalContextWrapper(props:props){
                         return newLoaded;
                     })
                 }
-                SetFriends(x => [...x, User.User.uid])
+                SetFriendRequests(x => {
+                    const temp: User[] = [];
+
+                    x.forEach(user => {
+                        if(user.uid !== User.User.uid) temp.push(user);
+                    })
+
+                    return temp;
+                })
+                SetFriends(x => {
+                    const temp = new Set(x)
+                    temp.add(User.User.uid)
+                    return temp
+                })
             })
 
             socket.on("UserOnline", uid => {
@@ -165,9 +189,86 @@ export function GlobalContextWrapper(props:props){
                     }
                 })
             })
-
         } 
     }, [socket])
+
+    useEffect(()=>{
+        if(socket){
+            socket.on('RevokeChatPerm', chatID => {
+                SetCurrentChat(x => {
+                    
+                    if(x.id === chatID){
+                        return {
+                            name: "",
+                            id: "",
+                            owner: "",
+                            members: []
+                        }
+                    }else{
+                        return x
+                    }
+                })
+            })
+
+            socket.on('RemoveUser', (uid) => {
+                /*
+
+                update state of Chat Members
+                and remove from LoadedUsers if not affiliated to uid as a Friend
+                (this is because we won't get updates on the online Status of uid anyways)
+
+                */
+                SetCurrentChat(x => { //remove kicked member from current chat member list
+                    const newMembers: string[] = []
+
+                    x.members.forEach(member => {
+                        if(member !== uid) newMembers.push(member);
+                    })
+
+                    return {
+                        ...x,
+                        members: newMembers
+                    }
+                })
+
+                // if(!Friends.has(uid)){ //if removed user is not in Friends list remove them from loaded users
+                //     SetLoadedUsers(x => {
+                //         const newLoadedUsers = new Map(x);
+                //         newLoadedUsers.delete(uid)
+                //         return newLoadedUsers
+                //     })
+                // }
+            })
+        }
+    }, [socket, SetCurrentChat])
+
+    useEffect(()=>{
+        if(socket){
+            socket.on('UpdateChatUsers', ({Chatid, NewUser})=>{
+
+                SetLoadedUsers(x => {
+                    if(!x.has(NewUser.User.uid)){
+                        const newLoadedUsers = new Map(x);
+                        newLoadedUsers.set(NewUser.User.uid, NewUser);
+                        return newLoadedUsers;
+                    }else{
+                        return x;
+                    }
+                })
+
+                SetCurrentChat(x => {
+                    if(x.id === Chatid){
+                        return {
+                            ...x,
+                            members: [...x.members, NewUser.User.uid]
+                        }
+                    }else{
+                        return x
+                    }
+                })
+            })
+        }
+    }, [socket, SetCurrentChat, SetLoadedUsers])
 
     return (
         <LoadedUserContext.Provider value={LoadedUserContextValue}>

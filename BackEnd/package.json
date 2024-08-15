@@ -2,19 +2,24 @@
   "name": "sockettest",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon --env-file=.env index.js"
+    "start": "nodemon -w .env index.ts"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/node": "^20.14.10",
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "firebase-admin": "^12.2.0",
     "http": "^0.0.1-security",
-    "nodemon": "^3.1.3",
-    "socket.io": "^4.7.5"
+    "socket.io": "^4.7.5",
+    "sockettest": "file:"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4",
+    "ts-node": "^10.9.2"
   }
 }

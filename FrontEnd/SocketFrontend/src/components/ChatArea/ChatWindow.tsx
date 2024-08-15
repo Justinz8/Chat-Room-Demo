@@ -29,7 +29,6 @@ export default function ChatWindow() {
   useEffect(() => {
     if (socket) {
       socket.on(`RecieveMessage`, (message: Message) => {
-        console.log(message);
         SetCurrentMessages((x) => [...x, message]);
       });
     }
@@ -40,11 +39,15 @@ export default function ChatWindow() {
 
   useEffect(() => {
     if (currentChat.id) {
+      
+      
       Fetch('getChatMessages', {
         chatID: currentChat.id,
       }).then((data) => {
         SetCurrentMessages(data.ChatMessages);
       });
+    }else{
+      SetCurrentMessages([])
     }
   }, [currentChat.id]);
 
@@ -54,7 +57,7 @@ export default function ChatWindow() {
 
   function submitMessage(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    console.log(socket)
+
     if(socket){
       socket.emit(`SendMessage`, { message: message, chatID: currentChat.id });
     }
@@ -65,7 +68,7 @@ export default function ChatWindow() {
   const messages = currentMessages.map((message: Message, index: number) => {
     let merge = false;
 
-    if (message.type===1 && index - 1 >= 0 && message.sender.uid === currentMessages[index - 1]?.sender.uid) {
+    if (message.type===1 && currentMessages[index - 1]?.type === 1 && message.sender.uid === currentMessages[index - 1]?.sender.uid) {
       merge = true;
     }
 

@@ -4,6 +4,7 @@ import { getLoadedUserContext } from "./GlobalContextProvider";
 import { KnownUser } from "./interfaces";
 import { auth } from "./firebase";
 import { useMemo } from "react";
+import UserActionPopup from "./components/Popup/UserActionPopup";
 
 let sharedSocket: Socket | null = null;
 

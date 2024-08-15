@@ -50,13 +50,15 @@ export default function AddChat(props: props){
         })
     }
 
-    const FriendOptions = Friends.map((x:string) => {
+    const FriendOptions: JSX.Element[] = []
+    
+    Friends.forEach((x:string) => {
 
         const user = getLoadedUser(x);
 
         const Username = typeof(user) === "string" ? x : user.User.Username
 
-        return (
+        FriendOptions.push(
             <option onClick={()=>{AddChatFormAddFriendHandler(x)}} key={x}>
                 {Username}
             </option>
@@ -100,7 +102,6 @@ export default function AddChat(props: props){
     useEffect(()=>{
         if(socket){
             socket.on('newChat', (chat: Chat) => {
-                console.log(chat)
                 props.addChatsHelper(chat);
             })
         }
@@ -138,7 +139,7 @@ export default function AddChat(props: props){
                 </ul>
                 <br />
                 <label htmlFor="AddChat-AddFriend">Chat Name</label>
-                <select id="AddChat-AddFriend" value={""}>
+                <select id="AddChat-AddFriend" value={""} onChange={()=>{}}>
                     <option></option>
                     {FriendOptions}
                 </select>

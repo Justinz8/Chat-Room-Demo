@@ -66,14 +66,16 @@ export default function PopupFriends() {
   }
 
   function FriendsList(){
-    const styledFriends = Friends.map(x => {
+    const styledFriends: JSX.Element[] = []
+    
+    Friends.forEach(x => {
       const user = getLoadedUser(x)
 
       const Username = typeof(user) === "string" ? x : user.User.Username
 
       const Status = typeof(user) === "string" ? -1 : user.Status
 
-      return (
+      styledFriends.push(
         <li>
           {Username}
           {Status}

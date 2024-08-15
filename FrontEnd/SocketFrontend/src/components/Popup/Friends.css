@@ -6,4 +6,5 @@
     width: 50%;
     height: 50%;
     background-color: blue;
+    z-index: 10000;
 }

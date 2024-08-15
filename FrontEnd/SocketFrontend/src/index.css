@@ -4,3 +4,7 @@ body{
   height: 100%;
   font-family: 'Inter', sans-serif;
 }
+
+.popup-arrow{
+  width: 0;
+}

@@ -19,13 +19,14 @@ export default function AddToChat(){
 
     const socket = useSocket();
 
-    const AddToChatUserOptions = Friends.map((x:string) => {
+    const AddToChatUserOptions: JSX.Element[] = [];
 
+    Friends.forEach((x:string) => {
         const user = getLoadedUser(x) //need to make sure this stays true
 
         const Username = typeof(user) === "string" ? x : user.User.Username
 
-        return (
+        AddToChatUserOptions.push(
             <option value={x}>
                 {Username}
             </option>
@@ -34,7 +35,7 @@ export default function AddToChat(){
 
     function HandleAddUserSubmit(e: React.FormEvent<HTMLFormElement>){
         e.preventDefault()
-
+        
         if(socket){
             socket.emit('AddUserToChat', {Frienduid: AddToChat, Chatid: currentChat.id})
         }
@@ -49,6 +50,7 @@ export default function AddToChat(){
             <div className='AddToChat-Toggle-Body'>
                 <form onSubmit={HandleAddUserSubmit}>
                     <select value={AddToChat} onChange={AddToChatChangeHandler}>
+                        <option></option>
                         {AddToChatUserOptions}
                     </select>
                     <button type='submit'>SUBMIT</button>

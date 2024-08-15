@@ -19,6 +19,7 @@ export interface SocketProviderContext{
 export interface Message{
     message?: string,
     added?: User,
+    removed?: User,
     timestamp: number,
     sender: User,
     type: number
@@ -27,6 +28,7 @@ export interface Message{
 export interface Chat{
     name: string,
     id: string,
+    owner: string,
     members: string[]
 }
 
