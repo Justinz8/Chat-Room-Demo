@@ -220,7 +220,7 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
                             {sender: uid}
             ).catch(err => {
                 console.log(err)
-            )
+            })
         }
     })
 
