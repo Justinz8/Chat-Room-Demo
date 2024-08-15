@@ -29,8 +29,14 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
         const chatRef = db.collection('Chats')
         const userDataRef = db.collection('UserData')
 
-        return chatRef.doc(chatID).update({//first add the message to the db
-            ChatEntries: FieldValue.arrayUnion(message)
+        return chatRef.doc(chatID).get().then(doc => {
+            if(!doc.data().ChatMemberIDs.includes(uid)){
+                return Promise.reject("Unathorized - user is not in chat")
+            }
+        }).then(()=>{
+            return chatRef.doc(chatID).update({//first add the message to the db
+                ChatEntries: FieldValue.arrayUnion(message)
+            })
         }).then(()=>{
             /* 
                 Get the user object of each uid in the key pair of users
@@ -119,8 +125,8 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
             }
         }).then((newchat)=>{
             io.to(ChatMemberIDs).emit('newChat', newchat)
-        }).catch(error=>{
-            console.log(error)
+        }).catch(err=>{
+            console.log(err)
         })
     })
 
@@ -198,8 +204,8 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
             }else{
                 return Promise.reject('Unauthorized')
             }
-        }).catch((error) => {
-            console.log(error)
+        }).catch((err) => {
+            console.log(err)
         })
     })
 
@@ -214,7 +220,7 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
                             {sender: uid}
             ).catch(err => {
                 console.log(err)
-            })
+            )
         }
     })
 
@@ -233,7 +239,7 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
 
         return ChatRef.doc(chatID).get().then(doc => {
             if(!doc.data().ChatMemberIDs.includes(uidInChat)){
-                return Promise.reject("Unauthorized")
+                return Promise.reject("Unauthorized - uidInChat is not in chat")
             }
         }).then(() => {
             return ChatRef.doc(chatID).update({
@@ -281,12 +287,14 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
 
         ChatRef.doc(chatID).get().then(doc => {
             if(doc.data().ChatOwner !== uid){
-                return Promise.reject("Unauthorized")
+                return Promise.reject("Unauthorized - user is not owner of chat")
             }
         }).then(()=>{
             return RemoveUserFromChat(uidInChat, chatID)
         }).then(()=>{
             return SendMessageToChat(chatID, {uid: uid, removeduid: uidInChat, timestamp: Date.now(), type: -1}, {sender: uid, removed: uidInChat})
+        }).catch(err => {
+            console.log(err)
         })
     })
 
@@ -295,7 +303,7 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
         
         ChatRef.doc(chatID).get().then(doc => {
             if(doc.data().ChatOwner !== uid){
-                return Promise.reject("Unathorized - user is not owner of chat!")
+                return Promise.reject("Unathorized - user is not owner of chat")
             }
         }).then(()=>{
             return ChatRef.doc(chatID).update({
@@ -320,6 +328,9 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
             if(doc.data().ChatName===newTitle){
                 return Promise.reject("Title is the same")
             }
+            if(!doc.data().ChatMemberIDs.includes(uid)){
+                return Promise.reject("Unauthorized - User not in chat")
+            }
         }).then(()=>{
             return ChatRef.doc(chatID).update({
                 ChatName: newTitle
@@ -331,6 +342,8 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
                     io.to(doc.data().ChatMemberIDs).emit('ChangeChatTitle', {chatID: chatID, newTitle: newTitle})
                 })
             ])
+        }).catch(err=>{
+            console.log(err)
         })
     })
 }
