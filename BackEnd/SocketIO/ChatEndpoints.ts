@@ -1,6 +1,8 @@
 import { FieldValue } from 'firebase-admin/firestore'
 import admin from 'firebase-admin'
 import { Server, Socket } from 'socket.io'
+import { timeStamp } from 'console'
+import { send } from 'process'
 
 module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Server){
     const {getUsernames} = require('../HelperFunctions')
@@ -285,6 +287,50 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
             return RemoveUserFromChat(uidInChat, chatID)
         }).then(()=>{
             return SendMessageToChat(chatID, {uid: uid, removeduid: uidInChat, timestamp: Date.now(), type: -1}, {sender: uid, removed: uidInChat})
+        })
+    })
+
+    socket.on("MakeUserOwner", ({ uidInChat, chatID}) => {
+        const ChatRef = db.collection("Chats")
+        
+        ChatRef.doc(chatID).get().then(doc => {
+            if(doc.data().ChatOwner !== uid){
+                return Promise.reject("Unathorized - user is not owner of chat!")
+            }
+        }).then(()=>{
+            return ChatRef.doc(chatID).update({
+                ChatOwner: uidInChat
+            })
+        }).then(()=>{
+            return Promise.all([
+                ChatRef.doc(chatID).get().then(doc => {
+                    io.to(doc.data().ChatMemberIDs).emit('ChangeOwner', {uid: uidInChat, chatID: chatID})
+                }),
+                SendMessageToChat(chatID, {uid: uid, newOwnerUid: uidInChat, timestamp: Date.now(), type: 2}, {sender: uid, newOwner: uidInChat})
+            ])
+        }).catch(err => {
+            console.log(err)
+        })
+    })
+
+    socket.on('updateTitle', ({newTitle, chatID}) => {
+        const ChatRef = db.collection('Chats')
+
+        ChatRef.doc(chatID).get().then(doc => {
+            if(doc.data().ChatName===newTitle){
+                return Promise.reject("Title is the same")
+            }
+        }).then(()=>{
+            return ChatRef.doc(chatID).update({
+                ChatName: newTitle
+            })
+        }).then(()=>{
+            return Promise.all([
+                SendMessageToChat(chatID, {uid: uid, message: newTitle, timestamp: Date.now(), type: 3}, {sender: uid}),
+                ChatRef.doc(chatID).get().then(doc => {
+                    io.to(doc.data().ChatMemberIDs).emit('ChangeChatTitle', {chatID: chatID, newTitle: newTitle})
+                })
+            ])
         })
     })
 }

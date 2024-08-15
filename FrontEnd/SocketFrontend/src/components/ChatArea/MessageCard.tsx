@@ -12,7 +12,7 @@ interface props{
 export default function MessageCard(props: props) {
 
   function FormattedMessage(){
-    const {timestamp, sender, message, added, removed, type} = props.message;
+    const {timestamp, sender, message, added, removed, newOwner, type} = props.message;
     const formattedtimestamp = new Date(timestamp).toLocaleString();
     const merge = props.merge;
 
@@ -59,6 +59,17 @@ export default function MessageCard(props: props) {
             )}
             <p className="MessageCard-Message">{message}</p>
           </>
+        )
+      }
+      case 2:{
+        return (
+          <p>{sender.Username} made {newOwner?.Username} the owner</p>
+        )
+      }
+
+      case 3:{
+        return (
+          <p>{sender.Username} changed the chat name to {message}</p>
         )
       }
     }

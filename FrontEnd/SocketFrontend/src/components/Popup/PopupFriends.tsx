@@ -1,5 +1,9 @@
 import "./Friends.css";
 
+import Popup from "reactjs-popup";
+
+import UserActionPopup from "./UserActionPopup";
+
 import { User } from "../../interfaces";
 
 import React, { useState, useContext } from "react";
@@ -76,10 +80,20 @@ export default function PopupFriends() {
       const Status = typeof(user) === "string" ? -1 : user.Status
 
       styledFriends.push(
-        <li>
-          {Username}
-          {Status}
-        </li>
+        <Popup trigger={
+          <li className="PopupFriends-Friend">
+            {Username}
+            {Status}
+          </li>
+        }
+        position={['right top', 'right bottom']}
+        >
+          <UserActionPopup 
+            uid={typeof(user) === "string" ? x : user.User.uid}
+            chatOptions={false}
+          />
+        </Popup>
+        
       )
     })
 

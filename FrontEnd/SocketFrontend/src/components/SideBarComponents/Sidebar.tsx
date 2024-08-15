@@ -62,8 +62,36 @@ export default function Sidebar() {
           })
         })
       })
+
+      socket.on('ChangeOwner', ({ uid, chatID}) => {
+        setChats(x => {
+          return x.map(chat => {
+            if(chat.id === chatID){
+              return {
+                ...chat,
+                owner: uid
+              }
+            }
+            return chat
+          })
+        })
+      })
+
+      socket.on('ChangeChatTitle', ({chatID, newTitle}) => {
+        setChats(x => {
+          return x.map(chat => {
+            if(chat.id === chatID){
+              return {
+                ...chat,
+                name: newTitle
+              }
+            }
+            return chat
+          })
+        })
+    })
     }
-  }, [socket])
+  }, [UpdateLoadedUser, socket])
 
   function addChatsHelper(chat: Chat){
     setChats(x=>[...x, chat]);
@@ -97,7 +125,7 @@ export default function Sidebar() {
         setChats([]);
       }
     });
-  }, []);
+  }, [Fetch, UpdateLoadedUser]);
 
   const Styledchats = chats.map((x: Chat) => (
     <ChatCard

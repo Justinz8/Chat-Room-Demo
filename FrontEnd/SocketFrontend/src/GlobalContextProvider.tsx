@@ -244,6 +244,31 @@ export function GlobalContextWrapper(props:props){
 
     useEffect(()=>{
         if(socket){
+
+            socket.on('ChangeOwner', ({ uid, chatID}) => {
+                SetCurrentChat(x => {
+                    if(x.id === chatID){
+                        return ({
+                            ...x,
+                            owner: uid
+                        })
+                    }  
+                    return x
+                })
+            })
+
+            socket.on('ChangeChatTitle', ({chatID, newTitle}) => {
+                SetCurrentChat(x => {
+                    if(x.id === chatID){
+                        return {
+                            ...x,
+                            name: newTitle
+                        }
+                    }
+                    return x
+                })
+            })
+
             socket.on('UpdateChatUsers', ({Chatid, NewUser})=>{
 
                 SetLoadedUsers(x => {

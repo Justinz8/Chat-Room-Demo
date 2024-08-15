@@ -20,6 +20,7 @@ export interface Message{
     message?: string,
     added?: User,
     removed?: User,
+    newOwner?: User,
     timestamp: number,
     sender: User,
     type: number

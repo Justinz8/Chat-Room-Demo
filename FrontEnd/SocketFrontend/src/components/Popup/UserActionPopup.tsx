@@ -39,6 +39,12 @@ export default function UserActionPopup(props: props){
         }
     }
 
+    function MakeOwner(){
+        if(socket){
+            socket.emit('MakeUserOwner', {uidInChat: props.uid, chatID: currentChat.id})
+        }
+    }
+
     function GroupOwnerOptions(){
         if(props.chatOptions && currentChat.owner === auth.currentUser?.uid){
             return (
@@ -51,7 +57,7 @@ export default function UserActionPopup(props: props){
                         </button>
                     </li>
                     <li>
-                        <button>
+                        <button onClick={MakeOwner}>
                             <p>
                                 Make User Owner
                             </p>

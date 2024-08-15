@@ -6,5 +6,13 @@
     width: 50%;
     height: 50%;
     background-color: blue;
-    z-index: 10000;
+    z-index: 100;
+}
+
+.PopupFriends-Friend:hover{
+    cursor: pointer;
+    text-decoration: underline;
+}
+.PopupFriends-Friend{
+    width: fit-content;
 }

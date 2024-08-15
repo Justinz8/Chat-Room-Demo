@@ -102,6 +102,15 @@ module.exports = function(app: Express, db: admin.firestore.Firestore, io: Serve
                 if(!content.data().ChatEntries) return;
                 Promise.all(content.data().ChatEntries.map(x => {
                     switch(x.type){
+                        case -2: {
+                            return AddUserToMap(x.uid, map).then(()=>{
+                                return ({
+                                    ...x,
+                                    uid: undefined,
+                                    sender: getFormattedUser(x.uid, map)
+                                })
+                            })
+                        }
                         case -1: {
                             return Promise.all([
                                 AddUserToMap(x.uid, map),
@@ -109,8 +118,8 @@ module.exports = function(app: Express, db: admin.firestore.Firestore, io: Serve
                             ]).then(()=>{
                                 return ({
                                     ...x,
-                                    uid: null,
-                                    removeduid: null,
+                                    uid: undefined,
+                                    removeduid: undefined,
                                     sender: getFormattedUser(x.uid, map),
                                     removed: getFormattedUser(x.removeduid, map)
                                 })
@@ -123,8 +132,8 @@ module.exports = function(app: Express, db: admin.firestore.Firestore, io: Serve
                             ]).then(()=>{
                                 return ({
                                     ...x,
-                                    uid: null,
-                                    addeduid: null,
+                                    uid: undefined,
+                                    addeduid: undefined,
                                     sender: getFormattedUser(x.uid, map),
                                     added: getFormattedUser(x.addeduid, map)
                                 })
@@ -134,7 +143,30 @@ module.exports = function(app: Express, db: admin.firestore.Firestore, io: Serve
                             return AddUserToMap(x.uid, map).then(()=>{
                                 return ({
                                     ...x,
-                                    uid: null,
+                                    uid: undefined,
+                                    sender: getFormattedUser(x.uid, map)
+                                })
+                            })
+                        }
+                        case 2:{
+                            return Promise.all([
+                                AddUserToMap(x.uid, map),
+                                AddUserToMap(x.newOwnerUid, map)
+                            ]).then(()=>{
+                                return ({
+                                    ...x,
+                                    uid: undefined,
+                                    newOwnerUid: undefined,
+                                    sender: getFormattedUser(x.uid, map),
+                                    newOwner: getFormattedUser(x.newOwnerUid, map)
+                                })
+                            })
+                        }
+                        case 3:{
+                            return AddUserToMap(x.uid, map).then(()=>{
+                                return ({
+                                    ...x,
+                                    uid: undefined,
                                     sender: getFormattedUser(x.uid, map)
                                 })
                             })
