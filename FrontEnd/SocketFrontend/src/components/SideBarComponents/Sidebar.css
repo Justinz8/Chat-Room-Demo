@@ -29,6 +29,7 @@
 
 .SideBar-Chats{
     overflow-y: auto;
+    height: 100%;
 }
 
 .Sidebar-Button{
