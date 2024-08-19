@@ -13,8 +13,6 @@ import { useSocket, useLoadedUserGetter } from "../../CustomHooks";
 import { getFriendReqContext, getFriendsContext } from "../../GlobalContextProvider";
 
 export default function PopupFriends() {
-  const [FriendsPopup, SetFriendsPopup] = useState(false);
-
   const [FriendEmail, SetFriendEmail] = useState("");
 
   const {FriendRequests, } = useContext(getFriendReqContext());
@@ -44,7 +42,7 @@ export default function PopupFriends() {
 
   function FriendReqs(){
     const styledRequests = FriendRequests.map((x: User) => (
-      <div>
+      <div className="AddFriend-Request">
         <h3>{x.Username}</h3>
         <button onClick={()=>{AcceptFriendReq(x.uid);}}>Accept</button>
         <button onClick={()=>{AcceptFriendReq(x.uid);}}>Decline</button>
@@ -53,18 +51,19 @@ export default function PopupFriends() {
 
     return (
       <>
-        
-            <form onSubmit={onFriendSubmit}>
-              <input
-                type="text"
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  SetFriendEmail(e.target.value)
-                }
-                value={FriendEmail}
-              />
-              <button>Add Friend</button>
-            </form>
-            {styledRequests}
+        <h3>Add Friend</h3>
+        <form onSubmit={onFriendSubmit} className="AddFriend-Form">
+          <input
+            type="text"
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              SetFriendEmail(e.target.value)
+            }
+            value={FriendEmail}
+          />
+          <button>Add Friend</button>
+        </form>
+        <h3>Friend Requests</h3>
+        {styledRequests}
       </>
     )
   }
@@ -82,8 +81,10 @@ export default function PopupFriends() {
       styledFriends.push(
         <Popup trigger={
           <li className="PopupFriends-Friend">
-            {Username}
-            {Status}
+            <span className="PopupFriends-Username">
+              <p>{Username}</p>
+            </span>
+            <div className='PopupFriends-UserStatus' style={{backgroundColor: Status ? 'green' : 'gray'}} />
           </li>
         }
         position={['right top', 'right bottom']}
@@ -99,6 +100,7 @@ export default function PopupFriends() {
 
     return (
       <>
+        <h3>Friends</h3>
         <ul>
           {styledFriends}
         </ul>
@@ -122,16 +124,16 @@ export default function PopupFriends() {
 
   return (
     <div>
-      <button onClick={() => SetFriendsPopup(!FriendsPopup)}>Friends</button>
-        {FriendsPopup ? (
-          <div className="FirendsPopUp">
+      <Popup trigger={<button className="Sidebar-Button">Friends</button>}>
+        <div className="FriendsPopUp">
             <header>
-              <button onClick={()=>{SetPopupRender("FriendReqs")}}>Friend Reqs</button>
-              <button onClick={()=>{SetPopupRender("Friends")}}>Friends</button>
+              <button style={{borderRight: "1px solid var(--accent-color2)"}} className="Friends-Button" onClick={()=>{SetPopupRender("FriendReqs")}}>Friend Reqs</button>
+              <button style={{borderLeft: "1px solid var(--accent-color2)"}} className="Friends-Button" onClick={()=>{SetPopupRender("Friends")}}>Friends</button>
             </header>
-            {renderedPopup()}
+            <div className="Friends-Main">{renderedPopup()}</div>
+            
           </div>
-        ) : null}
+      </Popup>
     </div>
   );
 }

@@ -2,3 +2,28 @@
     background-color: white;
     border: 1px black solid;
 }
+
+.UserActionPopup-Wrapper li{
+    list-style: none;
+    width: 100%;
+}
+
+.UserActionPopup-Wrapper li button{
+    width: 100%;
+    background-color: var(--secondary-color);
+    border: none;
+    border-radius: 10px;
+}
+
+.UserActionPopup-Wrapper li button:hover{
+    background-color: var(--primary-color);
+    cursor: pointer;
+}
+
+.UserActionPopup-Wrapper ul{
+    padding: 3px;
+    margin: 0;
+    width: 150px;
+    background-color: var(--secondary-color);
+    border: 2px solid var(--primary-color);
+}

@@ -49,15 +49,23 @@ export default function ChatWindowHeader(){
     }
 
     return (
-        <header className="ChatWindow-Header">
+        <>
+         {currentChat.id && (
+            <header className="ChatWindow-Header">
 
-            <form ref={titleRef} onSubmit={handleUpdateTitle}>
-                <input type='text' value={ChatTitle} onChange={ChatTitleChange}/>
-                <button type='submit' hidden={true}></button>
-            </form>
+                <form ref={titleRef} onSubmit={handleUpdateTitle}>
+                    <input className='ChatHeader-Title' type='text' maxLength={21} value={ChatTitle} onChange={ChatTitleChange}/>
+                    <button type='submit' hidden={true}></button>
+                </form>
+                <div className='ChatHeader-Buttons'>
+                    <AddToChat />
+                    <LeaveChat />
+                </div>
+    
+                
+            </header>
+         )}
+        </>
 
-            <AddToChat />
-            <LeaveChat />
-        </header>
     )
 }

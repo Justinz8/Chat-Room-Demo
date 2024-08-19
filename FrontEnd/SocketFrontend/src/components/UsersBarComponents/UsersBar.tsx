@@ -25,25 +25,30 @@ export default function UsersBar(){
         const uid = (typeof(user) === "string") ? x : user.User.uid
         
         return (
-            <div>
-                <Popup 
-                  trigger={
-                    <span className="UsersBar-Username">
-                      {Username}
-                    </span>
-                  }
-                  position={['left top', 'left bottom']}
-                  keepTooltipInside='body'>
-                  <UserActionPopup uid={uid} chatOptions={true}/>
-                </Popup>
-                <p>{Status}</p>
-            </div>
+          <Popup 
+              trigger={
+              <div className='UsersBar-User'>
+                      <span className="UsersBar-Username">
+                        <p>{Username}</p>
+                      </span>
+                  <div className='UsersBar-UserStatus' style={{backgroundColor: Status ? 'green' : 'gray'}} />
+              </div>
+              }
+              position={['left top', 'left bottom']}
+              keepTooltipInside='body'>
+              <UserActionPopup uid={uid} chatOptions={true}/>
+            </Popup>
         )
     })
 
     return (
-        <div className='UsersBar-Wrapper'>
+      <>
+       {currentChat.id && (
+          <div className='UsersBar-Wrapper'>
+            <h2>Members</h2>
             {styledMembers}
-        </div>
+          </div>
+       )}
+      </>
     )
 }

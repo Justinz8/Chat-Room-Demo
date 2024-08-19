@@ -1,14 +1,9 @@
-import { useState, useEffect, useContext } from "react"
+import { useState, useContext } from "react"
 import { useSocket, useLoadedUserGetter } from "../../CustomHooks"
 import './AddChat.css'
 
-import { Chat } from "../../interfaces"
-
 import { getFriendsContext } from "../../GlobalContextProvider"
-
-interface props{
-    addChatsHelper: (chat: Chat)=>void
-}
+import Popup from "reactjs-popup"
 
 interface AddChatForm{
     Name: string,
@@ -16,7 +11,7 @@ interface AddChatForm{
 }
 
 
-export default function AddChat(props: props){
+export default function AddChat(){
 
     const [AddChatForm, SetAddChatForm] = useState<AddChatForm>({
         Name: "",
@@ -90,22 +85,11 @@ export default function AddChat(props: props){
 
         return (
             <li key={x}>
-                <div>
-                    <p>{Username}</p>
-                    <button onClick={()=>{RemoveFriend(x)}}>Remove</button>
-                </div>
-                
+                <p>{Username}</p>
+                <button onClick={()=>{RemoveFriend(x)}}>Remove</button>
             </li>
         )
     })
-
-    useEffect(()=>{
-        if(socket){
-            socket.on('newChat', (chat: Chat) => {
-                props.addChatsHelper(chat);
-            })
-        }
-    }, [socket])
 
     function handleAddChatFormSubmit(e: React.FormEvent<HTMLFormElement>){
         e.preventDefault();
@@ -129,32 +113,32 @@ export default function AddChat(props: props){
     function AddChatPopUpBody(){
         return (
             <div className="AddChat-Body">
-            <form onSubmit={handleAddChatFormSubmit}>
-                <label htmlFor="AddChat-ChatName">Chat Name</label>
-                <input type="text" id="AddChat-ChatName" onChange={AddChatNameFormHandler} value={AddChatForm.Name}></input>
-                <br />
-                <h3>Selected the following to add to chat: </h3>
-                <ul>
-                    {AddedFriends}
-                </ul>
-                <br />
-                <label htmlFor="AddChat-AddFriend">Chat Name</label>
-                <select id="AddChat-AddFriend" value={""} onChange={()=>{}}>
-                    <option></option>
-                    {FriendOptions}
-                </select>
-                <button type="submit">Submit</button>
-            </form>
-        </div>
+                <h3>Create a new Chat</h3>
+                <form onSubmit={handleAddChatFormSubmit} className="AddChat-Form">
+                    <label htmlFor="AddChat-ChatName">Chat Name</label>
+                    <br />
+                    <input type="text" id="AddChat-ChatName" onChange={AddChatNameFormHandler} value={AddChatForm.Name}></input>
+                    <h3>Select friends to add to chat: </h3>
+                    <select id="AddChat-AddFriend" value={""} onChange={()=>{}}>
+                        <option></option>
+                        {FriendOptions}
+                    </select>
+                    <ul>
+                        {AddedFriends}
+                    </ul>
+                    <button type="submit">Submit</button>
+                </form>
+            </div>
         )
     }
 
-    const [AddChatPopup, SetAddChatPopup] = useState<boolean>(false);
-
     return (
         <div>
-            <button onClick={()=>{SetAddChatPopup(x => !x)}}>Make Chat</button>
-            {AddChatPopup && AddChatPopUpBody()}
+            <Popup trigger={
+                <button className="Sidebar-Button">Make Chat</button>
+            }>
+                {AddChatPopUpBody()}
+            </Popup>
         </div>
     )
 }

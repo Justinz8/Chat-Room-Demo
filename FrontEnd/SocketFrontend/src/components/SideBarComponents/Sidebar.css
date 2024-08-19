@@ -1,23 +1,63 @@
 .Sidebar-Wrapper{
-    background-color: gray;
+    background-color: var(--secondary-color);
+    border-right: 2px solid var(--accent-color2);
     width: 250px;
-    height: 100%;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .ChatCard-Wrapper{
-    background-color: white;
+    background-color: var(--secondary-color);
     height: 100px;
     text-align: left;
-    border: 1px solid black;
+    border: none;
+    border-radius: 15px;
     width: calc(100% - 2px);
 }
 
 .ChatCard-Wrapper:hover{
-    background-color: yellow;
+    background-color: var(--primary-color);
     cursor: pointer;
 }
 
 .ChatCard-Name{
     padding: 0;
     margin: 0;    
+}
+
+.SideBar-Chats{
+    overflow-y: auto;
+}
+
+.Sidebar-Button{
+    width: 100%;
+    padding: 10px;
+    background-color: var(--secondary-color);
+    color: var(--accent-color1);
+    border: none;
+    border-radius: 10px;
+    transition: 0.2s;
+}
+
+.Sidebar-Button:hover{
+    background-color: var(--primary-color);
+    cursor: pointer;
+}
+
+.Sidebar-Logout:hover{
+    background-color: rgb(237, 65, 27);
+    color: var(--accent-color3);
+}
+
+.Sidebar-ButtonSec{
+    border-top: 3px solid var(--accent-color2);
+}
+
+.Sidebar-Wrapper > h2{
+    width: 100%;
+    border-bottom: 2px solid var(--accent-color2);
+    margin: 0;
+    padding: 10px 0;
 }

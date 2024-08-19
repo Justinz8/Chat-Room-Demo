@@ -4,10 +4,91 @@
     top: 50%;
     transform: translate(-50%, -40%);
     z-index: 100000;
-    background-color: white;
+    background-color: var(--primary-color);
+    border: 2px solid var(--secondary-color);
+    padding: 4px;
+    width: 350px;
 }
 
 .AddToChat-Toggle-Body{
     position: relative;
     z-index: 100000;
+}
+
+.AddChat-Form{
+    color: var(--accent-color1);
+}
+
+.AddChat-Form input{
+    width: calc(100% - 14px);
+    border: none;
+    padding: 5px;
+    border-radius: 10px;
+    background-color: var(--accent-color2);
+    color: var(--accent-color1);
+}
+
+.AddChat-Form input:focus-visible{
+    outline: none;
+}
+
+.AddChat-Form select{
+    width: calc(100% - 4px);
+    height: 30px;
+    background-color: var(--accent-color2);
+    color: var(--accent-color1);
+    border: none;
+    border-radius: 15px;
+} 
+
+.AddChat-Form select:focus-visible{
+    outline: none;
+}
+
+.AddChat-Form ul{
+    list-style: none;
+    padding: 0;
+}
+
+.AddChat-Form li{
+    border: 2px solid var(--accent-color2);
+}
+
+.AddChat-Form li p{
+    width: 100%;
+    text-align: center;
+    padding: 0;
+    margin: 10px;
+}
+
+.AddChat-Form li button{
+    width: 100%;
+    background-color: var(--primary-color);
+    border: none;
+    border-top: 2px solid var(--accent-color2);
+    transition: 0.3s;
+    color: var(--accent-color1);
+}
+
+.AddChat-Form li button:hover{
+    background-color: var(--secondary-color);
+    border-top: 2px solid var(--primary-color);
+    cursor: pointer;
+    color: var(--accent-color3);
+}
+
+.AddChat-Form > button{
+    width: 100%;
+    background-color: var(--primary-color);
+    border: 2px solid var(--secondary-color);
+    transition: 0.3s;
+    color: var(--accent-color1);
+    padding: 5px 0;
+}
+
+.AddChat-Form > button:hover{
+    background-color: var(--secondary-color);
+    border-top: 2px solid var(--primary-color);
+    cursor: pointer;
+    color: var(--accent-color3);
 }

@@ -83,7 +83,7 @@ export default function PopupAuth() {
             onChange={handleCredentialChange}
           />
           <br />
-          <button>Login</button>
+          <button className="AuthPage-SubmitButton">Login</button>
         </form>
       </div>
     );
@@ -121,7 +121,7 @@ export default function PopupAuth() {
             onChange={handleCredentialChange}
           />
           <br />
-          <button>Signup</button>
+          <button className="AuthPage-SubmitButton">Signup</button>
         </form>
       </div>
     );

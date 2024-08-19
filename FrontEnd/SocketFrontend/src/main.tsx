@@ -4,5 +4,10 @@ import App from "./App.tsx";
 import "./index.css";
 
 import { GlobalContextWrapper } from "./GlobalContextProvider.tsx";
+import { LoadedUserProvider } from "./LoadedUserContextProvider.tsx"
 
-ReactDOM.createRoot(document.getElementById("root")!).render(<GlobalContextWrapper><App /></GlobalContextWrapper>);
+ReactDOM.createRoot(document.getElementById("root")!).render(<LoadedUserProvider>
+                                                                <GlobalContextWrapper>
+                                                                    <App />
+                                                                </GlobalContextWrapper>
+                                                            </LoadedUserProvider>);

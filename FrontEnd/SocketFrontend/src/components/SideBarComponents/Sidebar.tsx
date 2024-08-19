@@ -92,10 +92,18 @@ export default function Sidebar() {
     })
     }
   }, [UpdateLoadedUser, socket])
-
-  function addChatsHelper(chat: Chat){
-    setChats(x=>[...x, chat]);
-  }
+  
+  useEffect(()=>{
+    if(socket){
+        socket.on('newChat', ({newchat, membersList}: {newchat: Chat, membersList: KnownUser[]}) => {
+            setChats(x=>[...x, newchat]);
+            console.log(chats)
+            membersList.forEach(member => {
+              UpdateLoadedUser(member.User.uid, member)
+            })
+        })
+    }
+  }, [UpdateLoadedUser, socket])
 
   useEffect(() => {
     onAuthStateChanged(auth, (user) => {
@@ -142,12 +150,19 @@ export default function Sidebar() {
 
   return (
     <div className="Sidebar-Wrapper">
+      <h2>Chats</h2>
+
+      <div className="SideBar-Chats">
       {Styledchats}
-      <button className="Sidebar-Logout" onClick={logoutHandler}>
-        Logout
-      </button>
-      <PopupFriends />
-      <AddChat addChatsHelper={addChatsHelper}/>
+      </div>
+      
+      <div className="Sidebar-ButtonSec">
+        <PopupFriends />
+        <AddChat />
+        <button className="Sidebar-Button Sidebar-Logout" onClick={logoutHandler}>
+          Logout
+        </button>
+      </div>
     </div>
   );
 }

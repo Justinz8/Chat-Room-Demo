@@ -1,5 +1,7 @@
 import './AddToChat.css'
 
+import Popup from 'reactjs-popup';
+
 import { useState, useContext } from 'react'
 
 import { useSocket } from '../../../CustomHooks';
@@ -12,7 +14,6 @@ export default function AddToChat(){
 
     const {getLoadedUser} = useLoadedUserGetter();
 
-    const [ToggleAddToChat, SetToggleAddToChat] = useState<boolean>(false);
     const [AddToChat, SetAddToChat] = useState<string>("");
     const {currentChat, } = useContext(getChatContext());
     const {Friends, } = useContext(getFriendsContext());
@@ -44,25 +45,21 @@ export default function AddToChat(){
     function AddToChatChangeHandler(e: React.ChangeEvent<HTMLSelectElement>) {
         SetAddToChat(e.target.value);
     }
-
-    function ToggledAddToChat(){
-        return (
-            <div className='AddToChat-Toggle-Body'>
-                <form onSubmit={HandleAddUserSubmit}>
-                    <select value={AddToChat} onChange={AddToChatChangeHandler}>
-                        <option></option>
-                        {AddToChatUserOptions}
-                    </select>
-                    <button type='submit'>SUBMIT</button>
-                </form>
-            </div>
-        )
-    }
     
     return (
         <div className='AddToChat-Body'>
-            <button className='AddToChat-Toggle' onClick={()=>{SetToggleAddToChat(x=>!x)}}>Add To Chat</button>
-            {ToggleAddToChat && ToggledAddToChat()}
+            <Popup trigger={<button className='ChatHeader-Button AddToChat-Toggle'></button>}>
+                <div className='AddToChat-Toggle-Body'>
+                    <h3>Add Friend to chat</h3>
+                    <form onSubmit={HandleAddUserSubmit}>
+                        <select value={AddToChat} onChange={AddToChatChangeHandler}>
+                            <option></option>
+                            {AddToChatUserOptions}
+                        </select>
+                        <button type='submit'>SUBMIT</button>
+                    </form>
+                </div>
+            </Popup>
         </div>
     )
 }

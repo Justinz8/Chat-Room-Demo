@@ -1,10 +1,8 @@
 import { Socket, io } from "socket.io-client";
-import { useState, useEffect, useContext, useCallback } from "react";
-import { getLoadedUserContext } from "./GlobalContextProvider";
+import { useState, useEffect, useCallback, useContext } from "react";
 import { KnownUser } from "./interfaces";
 import { auth } from "./firebase";
 import { useMemo } from "react";
-import UserActionPopup from "./components/Popup/UserActionPopup";
 
 let sharedSocket: Socket | null = null;
 
@@ -79,6 +77,8 @@ export function useFetch(url: string){
     return FetchValue
 }
 
+import { getLoadedUserContext } from "./LoadedUserContextProvider";
+
 export function useLoadedUserGetter(){
     const {LoadedUsers, SetLoadedUsers} = useContext(getLoadedUserContext());
 
@@ -96,20 +96,37 @@ export function useLoadedUserGetter(){
 
     const getLoadedUser = useCallback((uid: string): string | KnownUser => {
         const user = LoadedUsers.get(uid);
-
         if(!user){
             return uid;
         }
 
         return user;
-    }, [LoadedUsers])
+    }, [LoadedUsers])   
+
+    const updateUserState = useCallback((uid: string, status: number): void => {
+        SetLoadedUsers(x => {
+            if(x.has(uid)){
+                const newLoaded = new Map(x);
+                const OnlineUser = x.get(uid) as KnownUser;
+
+                newLoaded.set(uid, {
+                    ...OnlineUser,
+                    Status: status
+                });
+                return newLoaded;
+            }else{
+                return x;
+            }
+        })
+    }, [SetLoadedUsers])
 
     const useLoadedUserGetterValue = useMemo(()=>{
         return {
             UpdateLoadedUser,
-            getLoadedUser
+            getLoadedUser,
+            updateUserState
         }
-    }, [UpdateLoadedUser, getLoadedUser])
+    }, [UpdateLoadedUser, getLoadedUser, updateUserState])
 
     return useLoadedUserGetterValue;
 }

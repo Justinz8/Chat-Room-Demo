@@ -1,10 +1,10 @@
 .MessageCard-Body{
     width: 100%;
-    background-color: white;
+    background-color: var(--primary-color);
 }
 
 .MessageCard-Body:hover{
-    background-color: lightgray;
+    background-color: var(--accent-color2);
 }
 
 .MessageCard-TimeText{
@@ -14,7 +14,7 @@
 
 .MessageCard-Title{
     font-size: 20px;
-    color: black;
+    color: var(--accent-color3);
     margin: 0;
     margin-top: 10px;
 }
@@ -26,4 +26,8 @@
 
 .MessageCard-Message{
     margin: 0;
+    width: 60vw;
+    overflow-wrap: break-word;
+    color: var(--accent-color3);
+    white-space: pre-wrap;
 }

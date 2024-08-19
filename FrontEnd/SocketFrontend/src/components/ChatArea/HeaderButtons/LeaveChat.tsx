@@ -17,8 +17,7 @@ export default function LeaveChat(){
     }
 
     return (
-        <button onClick={LeaveChatHandler}>
-            Leave Chat
+        <button className="ChatHeader-Button LeaveChat-Toggle" onClick={LeaveChatHandler}>
         </button>
     )
 }

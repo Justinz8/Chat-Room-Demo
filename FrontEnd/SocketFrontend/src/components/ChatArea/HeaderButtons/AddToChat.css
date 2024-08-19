@@ -3,4 +3,57 @@
     left: 50%;
     top: 50%;
     transform: translate(-50%, -60%);
+    z-index: 10000000000000000000000000;
+}
+
+.LeaveChat-Toggle{
+    background-image: url('../../../assets//LeaveChatIcon.png');
+}
+
+.LeaveChat-Toggle:hover{
+    border: 2px solid rgb(237, 65, 27);;
+}
+
+.AddToChat-Toggle{
+    background-image: url('../../../assets/AddChatIcon.png');
+}
+
+.AddToChat-Toggle-Body{
+    width: 250px;
+    height: 150px;
+    background-color: var(--primary-color);
+    border: 2px solid var(--secondary-color);
+}
+
+.AddToChat-Toggle-Body select{
+    width: 100%;
+    border-radius: 10px;
+    color: var(--accent-color1);
+    text-align: center;
+    background-color: var(--primary-color);
+    border: 2px solid var(--secondary-color);
+    font-size: 20px;
+    transition: 0.3s;
+}
+
+.AddToChat-Toggle-Body select:hover, .AddToChat-Toggle-Body select:focus-visible{
+    background-color: var(--secondary-color);
+    border: 2px solid var(--primary-color);
+    color: var(--accent-color3);
+}
+
+.AddToChat-Toggle-Body button{
+    width: 100%;
+    border-radius: 10px;
+    color: var(--accent-color1);
+    background-color: var(--primary-color);
+    border: 2px solid var(--secondary-color);
+    transition: 0.3s;
+    margin-top: 10px;
+}
+
+.AddToChat-Toggle-Body button:hover{
+    background-color: var(--secondary-color);
+    border: 2px solid var(--primary-color);
+    color: var(--accent-color3);
 }

@@ -34,6 +34,7 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
                 return Promise.reject("Unathorized - user is not in chat")
             }
         }).then(()=>{
+            
             return chatRef.doc(chatID).update({//first add the message to the db
                 ChatEntries: FieldValue.arrayUnion(message)
             })
@@ -99,17 +100,15 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
                 ChatName: chat.name,
                 ChatOwner: uid
             })
-        }).then((doc)=>{
-            return Promise.all(
-                [getUsernames(ChatMemberIDs, userDataRef),
-                doc.id]
-            )
-        }).then(val => {
-            return {
+        }).then(doc => {
+            return Promise.all([{
                 name: chat.name, 
-                id: val[1],
+                id: doc.id,
                 owner: uid,
-                members: val[0].map(x => {
+                members: ChatMemberIDs
+            },
+            getUsernames(ChatMemberIDs, userDataRef).then(users => {
+                return users.map(x => {
                     if(io.sockets.adapter.rooms.get(x.uid)){
                         return {
                             User: x,
@@ -122,9 +121,10 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
                         }
                     }
                 })
-            }
+            })
+            ])
         }).then((newchat)=>{
-            io.to(ChatMemberIDs).emit('newChat', newchat)
+            io.to(ChatMemberIDs).emit('newChat', {newchat: newchat[0], membersList: newchat[1]})
         }).catch(err=>{
             console.log(err)
         })
@@ -154,15 +154,24 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
                     ChatEntries: FieldValue.arrayUnion({uid: uid, addeduid: Frienduid, timestamp: Date.now(), type: 0})
                 })
             }).then(()=>{
-                return Promise.all([
-                    ChatData.ChatName,
-                    getUsernames([...ChatData.ChatMemberIDs, Frienduid], userDataRef),
-                ])
-            }).then((val) => {
-                return {
-                    name: val[0], 
+                getUsernames([uid, Frienduid], userDataRef).then((users)=>{
+                    io.to(ChatData.ChatMemberIDs).emit('UpdateChatUsers', {
+                        Chatid: Chatid, 
+                        NewUser: {
+                            User: users[1],
+                            Status: io.sockets.adapter.rooms.get(users[1].uid) ? 1 : 0
+                        }
+                    })
+                    io.to(Chatid).emit('RecieveMessage', {sender: users[0], added: users[1], timestamp: Date.now(), type: 0})
+                })
+            }).then(() => {
+                return Promise.all([{
+                    name: ChatData.ChatName, 
                     id: Chatid, 
-                    members: val[1].map(x => {
+                    members: [...ChatData.ChatMemberIDs, Frienduid]
+                },
+                getUsernames(ChatData.ChatMemberIDs, userDataRef).then(users => {
+                    return users.map(x => {
                         if(io.sockets.adapter.rooms.get(x.uid)){
                             return {
                                 User: x,
@@ -175,19 +184,11 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
                             }
                         }
                     })
-                }
-            }).then((newchat) => {
-                io.to(Frienduid).emit('newChat', newchat)
-                getUsernames([uid, Frienduid], userDataRef).then((users)=>{
-                    io.to(ChatData.ChatMemberIDs).emit('UpdateChatUsers', {
-                        Chatid: Chatid, 
-                        NewUser: {
-                            User: users[1],
-                            Status: io.sockets.adapter.rooms.get(users[1].uid) ? 1 : 0
-                        }
-                    })
-                    io.to(Chatid).emit('RecieveMessage', {sender: users[0], added: users[1], timestamp: Date.now(), type: 0})
                 })
+                ])
+            }).then((newchat) => {
+                console.log(newchat)
+                io.to(Frienduid).emit('newChat', {newchat: newchat[0], membersList: newchat[1]})
             })
         }).catch(err => {
             console.log(err)
@@ -214,6 +215,7 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
     })
 
     socket.on('SendMessage', (msg) => {
+
         if(msg.chatID){
             SendMessageToChat(msg.chatID, 
                             {uid: uid, message: msg.message, timestamp: Date.now(), type: 1}, 

@@ -10,7 +10,7 @@ interface props{
 }
 
 export default function MessageCard(props: props) {
-
+  
   function FormattedMessage(){
     const {timestamp, sender, message, added, removed, newOwner, type} = props.message;
     const formattedtimestamp = new Date(timestamp).toLocaleString();
@@ -20,21 +20,21 @@ export default function MessageCard(props: props) {
       case -2:{
         return (
           <>
-            <p>{`${sender.Username} left the chat at ${formattedtimestamp}`}</p>
+            <p className="MessageCard-Message">{`${sender.Username} left the chat at ${formattedtimestamp}`}</p>
           </>
         )
       }
       case -1:{
         return (
           <>
-            <p>{`${sender.Username} removed ${removed?.Username} at ${formattedtimestamp}`}</p>
+            <p className="MessageCard-Message">{`${sender.Username} removed ${removed?.Username} at ${formattedtimestamp}`}</p>
           </>
         )
       }
       case 0: {
         return (
           <>
-            <p>{`${sender.Username} added ${added?.Username} at ${formattedtimestamp}`}</p>
+            <p className="MessageCard-Message">{`${sender.Username} added ${added?.Username} at ${formattedtimestamp}`}</p>
           </>
         )
       }
@@ -63,13 +63,13 @@ export default function MessageCard(props: props) {
       }
       case 2:{
         return (
-          <p>{sender.Username} made {newOwner?.Username} the owner</p>
+          <p className="MessageCard-Message">{sender.Username} made {newOwner?.Username} the owner</p>
         )
       }
 
       case 3:{
         return (
-          <p>{sender.Username} changed the chat name to {message}</p>
+          <p className="MessageCard-Message">{sender.Username} changed the chat name to {message}</p>
         )
       }
     }

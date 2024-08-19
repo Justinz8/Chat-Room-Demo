@@ -5,6 +5,18 @@ body{
   font-family: 'Inter', sans-serif;
 }
 
+:root{
+  --primary-color: #1F1F1F;
+  --secondary-color: #181818;
+  --accent-color1: #6c6c6c;
+  --accent-color2: #2B2B2B;
+  --accent-color3: #fafafa;
+}
+
+p, h1, h2, h3, h4{
+  color: var(--accent-color1);
+}
+
 .popup-arrow{
   width: 0;
 }
