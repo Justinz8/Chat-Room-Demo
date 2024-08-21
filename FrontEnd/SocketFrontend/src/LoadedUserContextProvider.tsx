@@ -1,5 +1,7 @@
-import { createContext, useState, useMemo } from "react";
+import { createContext, useState, useMemo, useEffect } from "react";
 import { KnownUser } from "./interfaces";
+import { auth } from "./firebase";
+import { onAuthStateChanged } from "firebase/auth";
 
 interface LoadedUserContextType{
     LoadedUsers: Map<string, KnownUser>,
@@ -25,6 +27,14 @@ export function LoadedUserProvider(props: props){
             SetLoadedUsers
         }
     }, [LoadedUsers])
+
+    useEffect(()=>{
+        onAuthStateChanged(auth, (user)=>{
+            if(!user){
+                SetLoadedUsers(new Map<string, KnownUser>())
+            }
+        })
+    }, [])
 
     return <LoadedUserContext.Provider value={LoadedUserValue}>
         {props.children}

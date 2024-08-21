@@ -60,7 +60,7 @@ export function GlobalContextWrapper(props:props){
 
     const FriendRequestsValue = useMemo(()=>({
         FriendRequests,
-        SetFriendRequests
+        SetFriendRequests,
     }), [FriendRequests])
 
     const socket = useSocket();
@@ -79,6 +79,21 @@ export function GlobalContextWrapper(props:props){
             })
         }
       }, [socket, currentChat.id])
+
+      useEffect(()=>{
+        onAuthStateChanged(auth, (user) =>{
+            if(!user){
+                SetFriends(new Set())
+                SetFriendRequests([])
+                SetCurrentChat({
+                    name: "",
+                    id: "",
+                    owner: "",
+                    members: []
+                })
+            }
+        } )
+      }, [])
 
 
       /*
