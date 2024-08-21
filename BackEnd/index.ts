@@ -30,6 +30,8 @@ app.use(express.json());
 
 app.use(cors({origin: '*'}));
 
+//if user is attempting to sign up then no need to vertify token
+//otherwise check if token is valid and if so, store the uid in the body for future use
 app.use((req, res, next) => {
     switch(req.url){
         case "/SignUpInit":
@@ -47,6 +49,10 @@ app.use((req, res, next) => {
     }
 });
 
+/*
+    Check if user token is valid on socket connection, if so store the uid of the user
+    into the header
+*/
 io.use((socket, next) => {
     if(!socket.handshake.auth.token) return;
     admin.auth().verifyIdToken(socket.handshake.auth.token, true).then((result) => {

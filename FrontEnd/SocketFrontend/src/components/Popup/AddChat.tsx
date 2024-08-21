@@ -33,6 +33,7 @@ export default function AddChat(){
         })
     }
 
+    //add friend as selected members for the new chat
     function AddChatFormAddFriendHandler(Friend: string){
         SetAddChatForm(x => {
             if(x.Friends.includes(Friend)){
@@ -60,6 +61,7 @@ export default function AddChat(){
         )
     })
 
+    //remove friend with uid from selected users to add as members to the new chat
     function RemoveFriend(uid: string){
         SetAddChatForm(x => {
             const newFriends: string[] = []
@@ -77,6 +79,7 @@ export default function AddChat(){
         })
     }
 
+    //list of added users to be members for the new chat
     const AddedFriends = AddChatForm.Friends.map((x: string) => {
 
         const user = getLoadedUser(x);

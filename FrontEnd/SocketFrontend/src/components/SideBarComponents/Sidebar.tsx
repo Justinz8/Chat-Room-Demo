@@ -25,6 +25,10 @@ export default function Sidebar() {
 
   useEffect(()=>{
     if(socket){
+      /*
+        update chat with Chatid's member list by adding NewUser's uid whilst also storing
+        NewUser as a loaded user
+      */
       socket.on('UpdateChatUsers', ({Chatid, NewUser})=>{
 
         UpdateLoadedUser(NewUser.User.uid, NewUser);
@@ -41,6 +45,10 @@ export default function Sidebar() {
         })
       })
 
+      /*
+        Remove User with uid from chat with chatID
+      */
+
       socket.on('DecreaseMemberCount', ({ uid, chatID}) => {
           setChats(x => {
             return x.map(chat => {
@@ -55,6 +63,9 @@ export default function Sidebar() {
           })
       })
 
+      /*
+        delete chat with chatID from the list of chats
+      */
       socket.on('RevokeChatPerm', (chatID: string)=>{
         setChats(x => {
           return x.filter(chat => {
@@ -63,6 +74,9 @@ export default function Sidebar() {
         })
       })
 
+      /*
+        change the owner of the chat with chatID to be uid
+      */
       socket.on('ChangeOwner', ({ uid, chatID}) => {
         setChats(x => {
           return x.map(chat => {
@@ -77,6 +91,9 @@ export default function Sidebar() {
         })
       })
 
+      /*
+        Change the chat with chatID's title to newTitle
+      */
       socket.on('ChangeChatTitle', ({chatID, newTitle}) => {
         setChats(x => {
           return x.map(chat => {
@@ -95,9 +112,11 @@ export default function Sidebar() {
   
   useEffect(()=>{
     if(socket){
+      /*
+        Add newchat to the chat list and add each member to the loaded users map
+      */
         socket.on('newChat', ({newchat, membersList}: {newchat: Chat, membersList: KnownUser[]}) => {
             setChats(x=>[...x, newchat]);
-            console.log(chats)
             membersList.forEach(member => {
               UpdateLoadedUser(member.User.uid, member)
             })
@@ -106,13 +125,17 @@ export default function Sidebar() {
   }, [UpdateLoadedUser, socket])
 
   useEffect(() => {
+    /*
+      if a new user is logged in get and set all the chats the user is in
+      whilst also adding the member of every chat into the loaded users map
+    */
     onAuthStateChanged(auth, (user) => {
       if(user){
         Fetch('getChats').then((data) => { 
-          //will probably make it so that it only returns the uids of members
-          //then load the member information once user actually clicks on chat
           const LoadedChats = data.chats;
 
+          //store all the members into the loaded user map whilst only storing the uid of each
+          //member into the chat member list
           const stringchats = LoadedChats.map((x: {members: KnownUser[], name: string, id: string}) => {
             const members:string[] = []
 

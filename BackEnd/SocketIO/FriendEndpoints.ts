@@ -8,6 +8,13 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
 
     const uid = socket.request.headers.uid as string;
 
+    /*
+        Turns the AcceptedUser into a friend, updating both the backend and emitting
+        to the front end of the accepted user and current user to update their front end
+        with the new friend
+
+        if there is no friend request from AcceptedUser then return an error
+    */
     function AcceptFriendReq(AcceptedUser){
         const UserDataRef = db.collection("UserData");
 
@@ -20,7 +27,7 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
             }
         }).then(()=>{
             return Promise.all([
-                currentUserDoc.update({
+                currentUserDoc.update({//remove friend request from accepting user of friend request
                     FriendRequests: FieldValue.arrayRemove(AcceptedUser),
                     Friends: FieldValue.arrayUnion(AcceptedUser)
                 }), 
@@ -31,10 +38,12 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
         }).then(()=>{
             return getUsernames([AcceptedUser, uid], UserDataRef)
         }).then((Users)=>{
-            const NewFriendStatus = io.sockets.adapter.rooms.get(Users[0].uid)
+            //check if new friend is online or not
+            const NewFriendStatus = io.sockets.adapter.rooms.get(Users[0].uid) !== undefined ? 1 : 0
+
             io.to(uid).emit("NewFriend", {
                 User: Users[0],
-                Status: NewFriendStatus !== undefined ? 1 : 0
+                Status: NewFriendStatus
             });
             io.to(AcceptedUser).emit("NewFriend", {
                 User: Users[1],
@@ -49,10 +58,22 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
         AcceptFriendReq(AcceptedUser)
     })
 
-    socket.on('AddFriend', ({ FriendEmail, Frienduid }) => {
+    /*
+    Send a friend request to user either using Frienduid or FriendEmail
+    */
 
+    socket.on('AddFriend', ({ FriendEmail, Frienduid }) => {
+            /*
+                Sends a friend request to Fuid, this means updating the database and also emitting
+                to the front end to Fuid to update their friend request list
+
+                if Fuid = current user uid then nothing happens
+                if Fuid is already a friend of current user or if current user already has
+                an outgoing friend request to Fuid then return an error
+                if current user has an incoming friend request from Fuid then add Fuid as a friend
+            */
         function addFriendWithuid(Fuid){
-            if(Fuid === uid) {
+            if(Fuid === uid) { //if user is trying to add themselves as a user then stop them
                 return;
             }
 
@@ -70,23 +91,23 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
                     }
                 })
             }).then(()=>{
-                return UserRef.doc(Fuid).update({
+                return UserRef.doc(Fuid).update({//update friend requests of the recieving user
                     FriendRequests: FieldValue.arrayUnion(uid)
                 })
             }).then(()=>{
-                return UserRef.doc(uid).get().then((val)=>{
+                return UserRef.doc(uid).get().then((val)=>{ //get username of current user
                     return val.data().Username;
                 })
-            }).then((Username) => {
+            }).then((Username) => {//emit to Fuid to update friend requests on front end
                 io.to(Fuid).emit('FriendRequest', {uid: uid, Username: Username});
             }).catch(error => console.log(error))
         }
 
         const UserRef = db.collection("UserData");
 
-        if(Frienduid){
+        if(Frienduid){ //if given the uid of the target user then just use the above function
             addFriendWithuid(Frienduid);
-        }else{
+        }else{//otherwise get the uid of the target user
             db.collection('UserData').where('Email', '==', FriendEmail).get().then((querySnapshot) => {
                 if(!querySnapshot.empty){
                     const doc = querySnapshot.docs[0];
@@ -97,21 +118,30 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
         }
     });
 
+    /*
+        Removes Frienduid as a friend with current user, this includes updating the db
+        and emitting to the front end of both current user and Frienduid to update
+        friend list
+
+        if Frienduid is not a friend of current user return an error
+    */
     socket.on('RemoveFriend', (Frienduid)=>{
         const UserDataRef = db.collection("UserData");
 
         UserDataRef.doc(uid).get().then(doc => {
-            if(!doc.data().Friends.includes(Frienduid)){
+            //check if Frienduid is currently a friend of the current user
+            if(!doc.data().Friends.includes(Frienduid)){ 
                 return Promise.reject("Unauthorized")
             }
         }).then(()=>{
-            return UserDataRef.doc(uid).update({
+            return Promise.all([
+            UserDataRef.doc(uid).update({
                 Friends: FieldValue.arrayRemove(Frienduid)
-            })
-        }).then(()=>{
-            return UserDataRef.doc(Frienduid).update({
+            }),
+            UserDataRef.doc(Frienduid).update({
                 Friends: FieldValue.arrayRemove(uid)
             })
+            ])
         }).then(()=>{
             io.to(uid).emit("RemoveFriend", Frienduid);
             io.to(Frienduid).emit("RemoveFriend", uid);

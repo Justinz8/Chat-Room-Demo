@@ -6,20 +6,19 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
     console.log(`${uid} connected`);
 
     /*
-    If there are no other instances of a user connected to socket then alert all currently online friends
-    that this user is now online.
+    If there are no other instances of a user connected to socket then alert all 
+    currently online friends and members in relevant chats that this user is now online.
     */
 
-    const ChatRef = db.collection("Chats")
-
-    ChatRef.where('chatMememberIDs', 'array-contains', uid).get().then(docs => {
-        docs.forEach(doc => {
-            io.to(doc.id).emit("UserOnline", uid)
-        })
-    })
-
     if(!io.sockets.adapter.rooms.get(uid)){
+        const ChatRef = db.collection("Chats")
         const UserRef = db.collection("UserData");
+
+        ChatRef.where('chatMememberIDs', 'array-contains', uid).get().then(docs => {
+            docs.forEach(doc => {
+                io.to(doc.id).emit("UserOnline", uid)
+            })
+        })
         
         UserRef.doc(uid).get().then(doc => {
             io.to(doc.data().Friends).emit("UserOnline", uid);
@@ -27,20 +26,21 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
     }
 
     /* 
-    If there are no other instances of this user online then alert 
+        If there are no other instances of a user connected to socket then alert all 
+    currently offline friends and members in relevant chats that this user is now offline.
     */
 
     socket.on('disconnect', function () {
-        const UserRef = db.collection("UserData");
-        const ChatRef = db.collection("Chats")
-
-        ChatRef.where('chatMememberIDs', 'array-contains', uid).get().then(docs => {
-            docs.forEach(doc => {
-                io.to(doc.id).emit("UserOffline", uid)
-            })
-        })
-
         if(!io.sockets.adapter.rooms.get(uid)){            
+            const UserRef = db.collection("UserData");
+            const ChatRef = db.collection("Chats")
+    
+            ChatRef.where('chatMememberIDs', 'array-contains', uid).get().then(docs => {
+                docs.forEach(doc => {
+                    io.to(doc.id).emit("UserOffline", uid)
+                })
+            })
+
             UserRef.doc(uid).get().then(doc => {
                 io.to(doc.data().Friends).emit("UserOffline", uid);
             })

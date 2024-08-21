@@ -6,6 +6,11 @@ import { Express } from 'express';
 module.exports = function(app: Express, db: admin.firestore.Firestore, io: Server){
     const { getUsernames } = require('../HelperFunctions')
 
+    /*
+        Initiaized signup by creating a user in firebase users and creates a db 
+        doc of the newly created user
+    */
+
     app.post('/SignUpInit', (req, res) => {
         admin.auth().createUser({
             email: req.body.Email,
@@ -25,6 +30,10 @@ module.exports = function(app: Express, db: admin.firestore.Firestore, io: Serve
             res.send({success: false, error: error});
         });
     });
+
+    /*
+        Gets the chats of the current user
+    */
     
     app.post('/getChats', (req, res) => {
         
@@ -37,7 +46,7 @@ module.exports = function(app: Express, db: admin.firestore.Firestore, io: Serve
             return Promise.all(querySnapshot.docs.map(doc => {//map each doc to a promise
                 const data = doc.data();
                 return getUsernames(data.ChatMemberIDs, userDataRef).then(members => {//return a member struct as the final value of the promise
-                    return {
+                    return {//returns members of chats with names and their online status
                         name: data.ChatName, 
                         id: doc.id, 
                         owner: data.ChatOwner,
@@ -64,6 +73,11 @@ module.exports = function(app: Express, db: admin.firestore.Firestore, io: Serve
             res.send({success: false, error: error});
         });;
     });
+
+    /*
+        Helper function that maps the uid to its username by retrieving from the db
+        if not done so already
+    */
     
     function AddUserToMap(uid, map){
         const UserRef = db.collection('UserData');
@@ -82,6 +96,9 @@ module.exports = function(app: Express, db: admin.firestore.Firestore, io: Serve
         })
     }
 
+    /*
+        returns formatted user with username and uid as a single object
+    */
     function getFormattedUser(uid, map){ //assumes uid is already in map
         return {
             uid: uid,
@@ -89,6 +106,11 @@ module.exports = function(app: Express, db: admin.firestore.Firestore, io: Serve
         }
     }
     
+    /*
+        Gets and formats the chat messages of chatID based on their type
+
+        if current user is not a member of chatID then return an error
+    */
     app.post('/getChatMessages', (req, res) => {
         db.collection('Chats').doc(req.body.chatID).get().then(content => {
             
@@ -97,12 +119,12 @@ module.exports = function(app: Express, db: admin.firestore.Firestore, io: Serve
                 res.send({success: false, error: "Unauthorized"});
                 return;
             }else{
-                const map = new Map() //maps all user ids that show up in message history to a username
+                const map = new Map() //maps all user ids that show up in message history to their username
                 
                 if(!content.data().ChatEntries) return;
                 Promise.all(content.data().ChatEntries.map(x => {
                     switch(x.type){
-                        case -2: {
+                        case -2: {// user left message
                             return AddUserToMap(x.uid, map).then(()=>{
                                 return ({
                                     ...x,
@@ -111,7 +133,7 @@ module.exports = function(app: Express, db: admin.firestore.Firestore, io: Serve
                                 })
                             })
                         }
-                        case -1: {
+                        case -1: {//user removed message
                             return Promise.all([
                                 AddUserToMap(x.uid, map),
                                 AddUserToMap(x.removeduid, map)
@@ -125,7 +147,7 @@ module.exports = function(app: Express, db: admin.firestore.Firestore, io: Serve
                                 })
                             })
                         }
-                        case 0:{
+                        case 0:{//added user message
                             return Promise.all([
                                 AddUserToMap(x.uid, map),
                                 AddUserToMap(x.addeduid, map)
@@ -139,7 +161,7 @@ module.exports = function(app: Express, db: admin.firestore.Firestore, io: Serve
                                 })
                             })
                         }
-                        case 1:{
+                        case 1:{//user sent message
                             return AddUserToMap(x.uid, map).then(()=>{
                                 return ({
                                     ...x,
@@ -148,7 +170,7 @@ module.exports = function(app: Express, db: admin.firestore.Firestore, io: Serve
                                 })
                             })
                         }
-                        case 2:{
+                        case 2:{//new owner message
                             return Promise.all([
                                 AddUserToMap(x.uid, map),
                                 AddUserToMap(x.newOwnerUid, map)
@@ -162,7 +184,7 @@ module.exports = function(app: Express, db: admin.firestore.Firestore, io: Serve
                                 })
                             })
                         }
-                        case 3:{
+                        case 3:{//change chat name message
                             return AddUserToMap(x.uid, map).then(()=>{
                                 return ({
                                     ...x,
@@ -180,8 +202,12 @@ module.exports = function(app: Express, db: admin.firestore.Firestore, io: Serve
             }
         });
     });
+
+    /*
+        returns current user Friend request list, Friends list, and username
+    */
     
-    app.post('/getUserData', (req, res) => { //returns all immediately relevent information about the user
+    app.post('/getUserData', (req, res) => {
         db.collection('UserData').doc(req.body.uid).get().then((doc1) => {
             return Promise.all([
                 Promise.all(doc1.data().FriendRequests.map(x => {

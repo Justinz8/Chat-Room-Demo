@@ -45,8 +45,6 @@ export function GlobalContextWrapper(props:props){
     const [Friends, SetFriends] = useState<Set<string>>(new Set());
     const [FriendRequests, SetFriendRequests] = useState<User[]>([]);
 
-    
-
     const {UpdateLoadedUser, updateUserState } = useLoadedUserGetter()
 
     const ChatContextValue = useMemo(()=>({
@@ -66,13 +64,15 @@ export function GlobalContextWrapper(props:props){
     }), [FriendRequests])
 
     const socket = useSocket();
-
+    /*
+        if disconnected from socket whilst in a chat room then when 
+        reconnecting to the socket also rejoin the room associated with the chat room
+    */
     useEffect(()=>{
         if(socket){
             socket.off("connected");
             socket.on("connected", ()=>{
-                if (currentChat.id) {
-                    
+                if (currentChat.id) { 
                     console.log("rejoined", currentChat.id)
                     socket.emit("joinRoom", currentChat.id);
                 }
@@ -80,6 +80,10 @@ export function GlobalContextWrapper(props:props){
         }
       }, [socket, currentChat.id])
 
+
+      /*
+        Get all data related to the user that is needed on the initial load
+      */
     useEffect(() => {
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -87,8 +91,7 @@ export function GlobalContextWrapper(props:props){
                     SetFriendRequests(data.requests);
 
                     const friendsString = new Set<string>()
-                    if(auth.currentUser){
-                        
+                    if(auth.currentUser){   //add current user to the list of loaded users
                         UpdateLoadedUser(auth.currentUser.uid, {
                             Status: 1,
                             User: {
@@ -98,7 +101,7 @@ export function GlobalContextWrapper(props:props){
                         })
                     }
                     
-                    data.friends.forEach(x => {
+                    data.friends.forEach(x => {//add each friend as a loaded user
                         UpdateLoadedUser(x.User.uid, x)
                         friendsString.add(x.User.uid)
                     })
@@ -110,10 +113,17 @@ export function GlobalContextWrapper(props:props){
 
     useEffect(()=>{
         if(socket){
+            /*
+                On the instance of a new friend request add User to the list of friend requests
+            */
             socket.on("FriendRequest", (User: User) => {
                 SetFriendRequests((x: User[]) => [...x, User])
             });
 
+            /*
+                On the instance where a friend is removed, remove the friend with uid from the
+                list of friends
+            */
             socket.on("RemoveFriend", (uid: string) => {
                 SetFriends(x => {
                     if(!x.has(uid)) return x;
@@ -129,6 +139,11 @@ export function GlobalContextWrapper(props:props){
 
     useEffect(()=>{
         if(socket){
+            /*
+                On the instance of a new friend (i.e. a friend request is accepted),
+                add that user to the list of loaded users, remove User from friend requests,
+                and update the list of friends to include User
+            */
             socket.on("NewFriend", (User: KnownUser) => {
                 
                 UpdateLoadedUser(User.User.uid, User)
@@ -152,10 +167,12 @@ export function GlobalContextWrapper(props:props){
 
     useEffect(()=>{
         if(socket){
+            //sets User with uid to have online status
             socket.on("UserOnline", uid => {
                 updateUserState(uid, 1)
             })
 
+            //sets User with uid to have offline status
             socket.on("UserOffline", uid => {
                 updateUserState(uid, 0)
             })
@@ -164,6 +181,10 @@ export function GlobalContextWrapper(props:props){
 
     useEffect(()=>{
         if(socket){
+            /*
+             kicks the user from the current chat room if their permission to the chat room
+             has been revoked
+             */
             socket.on('RevokeChatPerm', chatID => {
                 SetCurrentChat(x => {
                     
@@ -215,6 +236,7 @@ export function GlobalContextWrapper(props:props){
     useEffect(()=>{
         if(socket){
 
+            //update chat with chatID's owner to uid
             socket.on('ChangeOwner', ({ uid, chatID}) => {
                 SetCurrentChat(x => {
                     if(x.id === chatID){
@@ -227,6 +249,7 @@ export function GlobalContextWrapper(props:props){
                 })
             })
 
+            //update chat with chatID's title to newTitle
             socket.on('ChangeChatTitle', ({chatID, newTitle}) => {
                 SetCurrentChat(x => {
                     if(x.id === chatID){
@@ -239,6 +262,7 @@ export function GlobalContextWrapper(props:props){
                 })
             })
 
+            //update chat with Chatid's members list to also include NewUser
             socket.on('UpdateChatUsers', ({Chatid, NewUser})=>{
                 UpdateLoadedUser(NewUser.User.uid, NewUser)
                 SetCurrentChat(x => {
@@ -253,7 +277,7 @@ export function GlobalContextWrapper(props:props){
                 })
             })
         }
-    }, [socket, SetCurrentChat])
+    }, [socket, SetCurrentChat, UpdateLoadedUser])
 
     return (
         <ChatContext.Provider value={ChatContextValue}>

@@ -8,13 +8,16 @@ import PopupAuth from "./components/Popup/PopupAuth";
 import ChatWindow from "./components/ChatArea/ChatWindow";
 import UsersBar from "./components/UsersBarComponents/UsersBar";
 
-import { useSocket } from "./CustomHooks";
-
 import "./App.css";
 
 function App() {
   const [loggedIn, setLoggedIn] = useState<number>(0);
 
+  /*
+    Set the state for signed in based of AuthStateChanged changing from its default value of 0. 
+    This is to prevent attempted loading of resources before the state of the page has been 
+    properly set
+  */
   useEffect(() => {
     onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -24,20 +27,6 @@ function App() {
       }
     });
   }, []);
-
-  const socket = useSocket();
-
-  useEffect(() => {
-    if (socket) {
-      socket.on("connect_error", (err: Error) => {
-        if(err.message === "Token Error"){
-          auth.currentUser?.getIdToken();
-        }
-        console.error(err);
-      });
-    }
-  }, [socket]);
-
 
   function loadFunction() {
     if (loggedIn === 1) {

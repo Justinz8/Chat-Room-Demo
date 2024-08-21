@@ -35,9 +35,7 @@ export default function ChatWindow() {
   }, [socket]);
 
   useEffect(() => {
-    if (currentChat.id) {
-      
-      
+    if (currentChat.id) {//on every chat switch, get the messages for that chat
       Fetch('getChatMessages', {
         chatID: currentChat.id,
       }).then((data) => {
@@ -61,16 +59,20 @@ export default function ChatWindow() {
     
     SetMessage("");
   }
-  //TODO: make this use global map too
+  
   const messages = currentMessages.map((message: Message, index: number) => {
     let merge = false;
 
+    //merge messages (not include name of sender and timestamp) if time between messages 
+    //is less that 10 minutes, previous message is the same sender, type of message is 
+    //1 (user sent message)
     if (message.type===1 && 
         currentMessages[index - 1]?.type === 1 && 
         message.sender.uid === currentMessages[index - 1]?.sender.uid && 
         message.timestamp - currentMessages[index - 1].timestamp < 600000) {
       merge = true;
-    }
+    } 
+
 
     return (
       <MessageCard

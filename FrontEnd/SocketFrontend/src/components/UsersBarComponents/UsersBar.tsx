@@ -15,6 +15,10 @@ export default function UsersBar(){
 
     const {currentChat, } = useContext(getChatContext());
 
+    /*
+      Style each member in the chat such that it displays its Username and online status
+      whilst also allowing the user to take action on a member when clicked on
+    */
     const styledMembers = currentChat.members.map(x => {
 
         const user = getLoadedUser(x);

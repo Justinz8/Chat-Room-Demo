@@ -12,6 +12,11 @@ interface props{
 }
 
 export function LoadedUserProvider(props: props){
+    /*
+        A loaded user is a user that has its uid associated with its username and 
+        online status stored
+    */
+
     const [LoadedUsers, SetLoadedUsers] = useState<Map<string, KnownUser>>(new Map<string, KnownUser>());
 
     const LoadedUserValue = useMemo(()=>{

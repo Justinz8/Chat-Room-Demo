@@ -15,6 +15,10 @@ export default function ChatCard(props: props) {
 
   const {currentChat, SetCurrentChat} = useContext(getChatContext());
 
+  /*
+    Join the chat with id ID on the backend to start recieving messages for the chat 
+    in real time
+  */
   function JoinCurrentChat(ID: string) {
     if (currentChat.id === ID) return;
     if(socket){

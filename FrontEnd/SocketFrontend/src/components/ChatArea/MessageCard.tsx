@@ -15,7 +15,7 @@ export default function MessageCard(props: props) {
     const {timestamp, sender, message, added, removed, newOwner, type} = props.message;
     const formattedtimestamp = new Date(timestamp).toLocaleString();
     const merge = props.merge;
-
+    //style the message based off the type of message
     switch (type){
       case -2:{
         return (

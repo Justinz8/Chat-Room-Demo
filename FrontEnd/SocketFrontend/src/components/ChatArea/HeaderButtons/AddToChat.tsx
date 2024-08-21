@@ -23,7 +23,7 @@ export default function AddToChat(){
     const AddToChatUserOptions: JSX.Element[] = [];
 
     Friends.forEach((x:string) => {
-        const user = getLoadedUser(x) //need to make sure this stays true
+        const user = getLoadedUser(x)
 
         const Username = typeof(user) === "string" ? x : user.User.Username
 

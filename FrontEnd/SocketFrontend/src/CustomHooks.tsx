@@ -4,16 +4,25 @@ import { KnownUser } from "./interfaces";
 import { auth } from "./firebase";
 import { useMemo } from "react";
 
+//global socket used so that every component that uses useSocket() will use the same socket
+//instead of repeatedly opening new sockets
 let sharedSocket: Socket | null = null;
 
 export function useSocket(){
     const [Socket, SetSocket] = useState<Socket | null>(null);
 
     useEffect(()=>{
+        /*
+            On every instance of a new user, reopen the global socket with the new 
+            accessToken associated with the new user
+        */
         auth.onIdTokenChanged((user)=>{
             if(user){
                 user.getIdToken().then(accessToken => {
+                    //if access token is the same no need to reopen socket
                     if(sharedSocket && accessToken === (sharedSocket?.auth as { [key: string]: any })["token"]) return;
+                    
+                    //disconnect socket and reopen with new access token
                     if(sharedSocket) {
                         sharedSocket.disconnect();
                         sharedSocket = null;
@@ -24,11 +33,11 @@ export function useSocket(){
                         }
                     })
                 }).then(()=>{
-                    SetSocket(sharedSocket);
+                    SetSocket(sharedSocket); //set the local socket to the global socket 
                 })
 
                
-            }else{
+            }else{//if no user is logged in set global socket and local socket to null
                 if(sharedSocket){
                     sharedSocket.disconnect();
                     sharedSocket = null;
@@ -41,10 +50,12 @@ export function useSocket(){
     return Socket;
 }
 
+//returns a simplified fetch function that takes in the server endpoint and body of the request
+//and sends a request
 export function useFetch(url: string){
 
     function FetchFunction (urlEnd: string, body?: object) {
-        if(!auth.currentUser){
+        if(!auth.currentUser){ //if no user is logged in just send the request
             return fetch(`${url}/${urlEnd}`, {
                 method: "POST",
                 headers: {
@@ -52,7 +63,7 @@ export function useFetch(url: string){
                 },
                 body: JSON.stringify(body ? {...body}: {}),
             }).then((response) => response.json())
-        }
+        } //if user is logged in send the request along with the token associated to the user
         return auth.currentUser.getIdToken().then((token) => {
             return fetch(`${url}/${urlEnd}`, {
                 method: "POST",
@@ -79,9 +90,13 @@ export function useFetch(url: string){
 
 import { getLoadedUserContext } from "./LoadedUserContextProvider";
 
+//functions for the loaded users state
 export function useLoadedUserGetter(){
     const {LoadedUsers, SetLoadedUsers} = useContext(getLoadedUserContext());
 
+    /*
+        set user as a known user associated with uid uid
+    */
     const UpdateLoadedUser = useCallback((uid: string, user: KnownUser): void => {
         SetLoadedUsers(x => {
             if(!x.has(uid)){
@@ -94,6 +109,10 @@ export function useLoadedUserGetter(){
         })
     }, [SetLoadedUsers]);
 
+    /*
+        returns the loaded user associated with uid, or if the loaded user does not exist
+        in the map of loaded users just return the uid
+    */
     const getLoadedUser = useCallback((uid: string): string | KnownUser => {
         const user = LoadedUsers.get(uid);
         if(!user){
@@ -103,9 +122,12 @@ export function useLoadedUserGetter(){
         return user;
     }, [LoadedUsers])   
 
+    /*
+        Updates the online status of uid to status
+    */
     const updateUserState = useCallback((uid: string, status: number): void => {
         SetLoadedUsers(x => {
-            if(x.has(uid)){
+            if(x.has(uid)){ //if uid exists update the online status of that user
                 const newLoaded = new Map(x);
                 const OnlineUser = x.get(uid) as KnownUser;
 
@@ -114,7 +136,7 @@ export function useLoadedUserGetter(){
                     Status: status
                 });
                 return newLoaded;
-            }else{
+            }else{ //otherwise nothing changes
                 return x;
             }
         })
