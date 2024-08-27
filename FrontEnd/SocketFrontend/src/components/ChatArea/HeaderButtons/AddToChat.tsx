@@ -2,7 +2,7 @@ import './AddToChat.css'
 
 import Popup from 'reactjs-popup';
 
-import { useState, useContext } from 'react'
+import { useState, useContext, useEffect } from 'react'
 
 import { useSocket } from '../../../CustomHooks';
 
@@ -20,19 +20,23 @@ export default function AddToChat(){
 
     const socket = useSocket();
 
-    const AddToChatUserOptions: JSX.Element[] = [];
+    const [AddToChatUserOptions, SetAddToChatUserOptions] = useState<JSX.Element[]>([])
 
-    Friends.forEach((x:string) => {
-        getLoadedUser(x).then(user => {
-            const Username = typeof(user) === "string" ? x : user.User.Username
-
-            AddToChatUserOptions.push(
-                <option value={x}>
-                    {Username}
-                </option>
-            )
+    useEffect(()=>{
+        Promise.all(Array.from(Friends).map((x:string) => {
+            return getLoadedUser(x).then(user => {
+                const Username = typeof(user) === "string" ? x : user.User.Username
+    
+                return (
+                    <option value={x}>
+                        {Username}
+                    </option>
+                )
+            })
+        })).then(val => {
+            SetAddToChatUserOptions(val)
         })
-    })
+    }, [])
 
     function HandleAddUserSubmit(e: React.FormEvent<HTMLFormElement>){
         e.preventDefault()

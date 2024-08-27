@@ -1,4 +1,4 @@
-.PopupAuth{
+.PopupAuth {
     width: 300px;
     height: fit-content;
     background-color: var(--primary-color);
@@ -12,17 +12,18 @@
     padding: 10px;
 }
 
-body{
+body {
     background-image: url('../../assets/sl_0210121_40570_43.jpg');
     background-size: cover;
     background-repeat: no-repeat;
 }
 
-.PopupLoginHeader h1{
+.PopupLoginHeader h1 {
     margin: 0;
 }
 
-.PopupLoginContainer input, .PopupSignupContainer input{
+.PopupLoginContainer input,
+.PopupSignupContainer input {
     background-color: var(--primary-color);
     color: var(--accent-color1);
     border: 2px solid var(--secondary-color);
@@ -32,11 +33,14 @@ body{
     border-radius: 10px;
 }
 
-.PopupLoginContainer input:focus-visible, .PopupSignupContainer input:focus-visible{
+.PopupLoginContainer input:focus-visible,
+.PopupSignupContainer input:focus-visible {
+    background: none;
     outline: none;
 }
 
-.PopupLoginContainer button, .PopupSignupContainer button{
+.PopupLoginContainer button,
+.PopupSignupContainer button {
     margin-top: 5px;
     width: 250px;
     background-color: var(--primary-color);
@@ -46,7 +50,8 @@ body{
     transition: 0.3s;
 }
 
-.PopupLoginContainer button:hover, .PopupSignupContainer button:hover{
+.PopupLoginContainer button:hover,
+.PopupSignupContainer button:hover {
     background-color: var(--secondary-color);
     border: 2px solid var(--primary-color);
     cursor: pointer;

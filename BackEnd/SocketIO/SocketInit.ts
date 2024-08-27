@@ -3,7 +3,7 @@ import { Server, Socket } from 'socket.io';
 
 import { Bucket } from '@google-cloud/storage'
 
-module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Server, bucket: Bucket){
+module.exports = function (db: admin.firestore.Firestore, socket: Socket, io: Server, bucket: Bucket) {
     const uid = socket.request.headers.uid as string;
     console.log(`${uid} connected`);
 
@@ -12,16 +12,16 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
     currently online friends and members in relevant chats that this user is now online.
     */
 
-    if(!io.sockets.adapter.rooms.get(uid)){
+    if (!io.sockets.adapter.rooms.get(uid)) {
         const ChatRef = db.collection("Chats")
         const UserRef = db.collection("UserData");
 
-        ChatRef.where('chatMememberIDs', 'array-contains', uid).get().then(docs => {
+        ChatRef.where('ChatMemberIDs', 'array-contains', uid).get().then(docs => {
             docs.forEach(doc => {
-                io.to(doc.id).emit("UserOnline", uid)
+                io.to(doc.data().ChatMemberIDs).emit("UserOnline", uid)
             })
         })
-        
+
         UserRef.doc(uid).get().then(doc => {
             io.to(doc.data().Friends).emit("UserOnline", uid);
         })
@@ -33,13 +33,13 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
     */
 
     socket.on('disconnect', function () {
-        if(!io.sockets.adapter.rooms.get(uid)){            
+        if (!io.sockets.adapter.rooms.get(uid)) {
             const UserRef = db.collection("UserData");
             const ChatRef = db.collection("Chats")
-    
-            ChatRef.where('chatMememberIDs', 'array-contains', uid).get().then(docs => {
+
+            ChatRef.where('ChatMemberIDs', 'array-contains', uid).get().then(docs => {
                 docs.forEach(doc => {
-                    io.to(doc.id).emit("UserOffline", uid)
+                    io.to(doc.data().ChatMemberIDs).emit("UserOffline", uid)
                 })
             })
 
@@ -50,6 +50,6 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
     });
 
     socket.emit('connected');
-    
+
     socket.join(uid);
 }
