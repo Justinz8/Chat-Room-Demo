@@ -23,15 +23,15 @@ export default function AddToChat(){
     const AddToChatUserOptions: JSX.Element[] = [];
 
     Friends.forEach((x:string) => {
-        const user = getLoadedUser(x)
+        getLoadedUser(x).then(user => {
+            const Username = typeof(user) === "string" ? x : user.User.Username
 
-        const Username = typeof(user) === "string" ? x : user.User.Username
-
-        AddToChatUserOptions.push(
-            <option value={x}>
-                {Username}
-            </option>
-        )
+            AddToChatUserOptions.push(
+                <option value={x}>
+                    {Username}
+                </option>
+            )
+        })
     })
 
     function HandleAddUserSubmit(e: React.FormEvent<HTMLFormElement>){

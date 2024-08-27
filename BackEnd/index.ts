@@ -9,31 +9,36 @@ const server = http.createServer(app);
 
 import { Server } from 'socket.io';
 
-const io = new Server(server, {cors: {origin: "*"}});
+const io = new Server(server, { cors: { origin: "*" } });
 
 import admin from 'firebase-admin';
+
+import { getStorage } from 'firebase-admin/storage';
 
 import { getFirestore } from 'firebase-admin/firestore';
 
 import serviceAccount from "./fir-test-5bb7c-firebase-adminsdk-f38j5-05e81d9be2.json";
 
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
-  databaseURL: process.env.databaseURL
+    credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+    databaseURL: process.env.databaseURL,
+    storageBucket: process.env.storageBucket
 });
 
 const db = getFirestore();
+
+const bucket = getStorage().bucket('chatapp-a9084.appspot.com');
 
 const port = 3000;
 
 app.use(express.json());
 
-app.use(cors({origin: '*'}));
+app.use(cors({ origin: '*' }));
 
 //if user is attempting to sign up then no need to vertify token
 //otherwise check if token is valid and if so, store the uid in the body for future use
 app.use((req, res, next) => {
-    switch(req.url){
+    switch (req.url) {
         case "/SignUpInit":
             next();
             break;
@@ -54,7 +59,7 @@ app.use((req, res, next) => {
     into the header
 */
 io.use((socket, next) => {
-    if(!socket.handshake.auth.token) return;
+    if (!socket.handshake.auth.token) return;
     admin.auth().verifyIdToken(socket.handshake.auth.token, true).then((result) => {
         socket.request.headers.uid = result.uid;
         next();
@@ -63,7 +68,7 @@ io.use((socket, next) => {
     })
 });
 
-require('./Express Endpoints/InitEndpoints')(app, db, io)
+require('./Express Endpoints/InitEndpoints')(app, db, io, bucket)
 
 io.on('connection', (socket) => {
     require('./SocketIO/SocketInit')(db, socket, io)

@@ -1,4 +1,4 @@
-import { useState, useContext } from "react"
+import { useState, useContext, useEffect, useCallback } from "react"
 import { useSocket, useLoadedUserGetter } from "../../CustomHooks"
 import './AddChat.css'
 
@@ -13,107 +13,120 @@ interface AddChatForm{
 
 export default function AddChat(){
 
-    const [AddChatForm, SetAddChatForm] = useState<AddChatForm>({
-        Name: "",
-        Friends: []
-    })
-
-    const socket = useSocket();
-
-    const {Friends, } = useContext(getFriendsContext());
-
-    const {getLoadedUser} = useLoadedUserGetter();
-
-    function AddChatNameFormHandler(e: React.ChangeEvent<HTMLInputElement>){
-        SetAddChatForm(x => {
-            return {
-                ...x,
-                Name: e.target.value
-            }
+    function AddChatPopUpBody(){
+        const [AddChatForm, SetAddChatForm] = useState<AddChatForm>({
+            Name: "",
+            Friends: []
         })
-    }
-
-    //add friend as selected members for the new chat
-    function AddChatFormAddFriendHandler(Friend: string){
-        SetAddChatForm(x => {
-            if(x.Friends.includes(Friend)){
-                return x;
-            }
-            return {
-                ...x,
-                Friends: [...x.Friends, Friend]
-            }
-        })
-    }
-
-    const FriendOptions: JSX.Element[] = []
     
-    Friends.forEach((x:string) => {
-
-        const user = getLoadedUser(x);
-
-        const Username = typeof(user) === "string" ? x : user.User.Username
-
-        FriendOptions.push(
-            <option onClick={()=>{AddChatFormAddFriendHandler(x)}} key={x}>
-                {Username}
-            </option>
-        )
-    })
-
-    //remove friend with uid from selected users to add as members to the new chat
-    function RemoveFriend(uid: string){
-        SetAddChatForm(x => {
-            const newFriends: string[] = []
-
-            x.Friends.forEach(friend => {
-                if(friend !== uid){
-                    newFriends.push(friend);
+        const socket = useSocket();
+    
+        const {Friends, } = useContext(getFriendsContext());
+    
+        const {getLoadedUser} = useLoadedUserGetter();
+    
+        function AddChatNameFormHandler(e: React.ChangeEvent<HTMLInputElement>){
+            SetAddChatForm(x => {
+                return {
+                    ...x,
+                    Name: e.target.value
                 }
-            })
-
-            return {
-                ...x,
-                Friends: newFriends
-            }
-        })
-    }
-
-    //list of added users to be members for the new chat
-    const AddedFriends = AddChatForm.Friends.map((x: string) => {
-
-        const user = getLoadedUser(x);
-
-        const Username = typeof(user) === "string" ? x : user.User.Username
-
-        return (
-            <li key={x}>
-                <p>{Username}</p>
-                <button onClick={()=>{RemoveFriend(x)}}>Remove</button>
-            </li>
-        )
-    })
-
-    function handleAddChatFormSubmit(e: React.FormEvent<HTMLFormElement>){
-        e.preventDefault();
-
-        if(socket){
-            socket.emit('addChat', {
-                chat: {
-                    name: AddChatForm.Name,
-                    members: AddChatForm.Friends,
-                }
-            })
-            SetAddChatForm({
-                Name: "",
-                Friends: []
             })
         }
+    
+        //add friend as selected members for the new chat
 
+    
+        const [FriendOptions, SetFriendOptions] = useState<JSX.Element[]>([])
 
-    }
+        function AddChatFormAddFriendHandler(Friend: string){
+            SetAddChatForm(x => {
+                if(x.Friends.includes(Friend)){
+                    return x;
+                }
+                return {
+                    ...x,
+                    Friends: [...x.Friends, Friend]
+                }
+            })
+        }
+    
+        useEffect(()=>{
+            Promise.all(Array.from(Friends).map((x:string) => {
+                return getLoadedUser(x).then(user => {
+                    const Username = typeof(user) === "string" ? x : user.User.Username
+        
+                    return (
+                        <option value={x} key={x}>
+                            {Username}
+                        </option>
+                    )
+                })
+            })).then(val => {
+                SetFriendOptions(val)
+            })
+        }, [])
+    
+        //remove friend with uid from selected users to add as members to the new chat
+        function RemoveFriend(uid: string){
+            SetAddChatForm(x => {
+                const newFriends: string[] = []
+    
+                x.Friends.forEach(friend => {
+                    if(friend !== uid){
+                        newFriends.push(friend);
+                    }
+                })
+    
+                return {
+                    ...x,
+                    Friends: newFriends
+                }
+            })
+        }
+    
+        //list of added users to be members for the new chat
+    
+        const [AddedFriends, SetAddedFriends] = useState<JSX.Element[]>([])
+    
+        useEffect(()=>{
+            Promise.all(
+                AddChatForm.Friends.map((x: string) => {
+                    return getLoadedUser(x).then(user => {
+                        const Username = typeof(user) === "string" ? x : user.User.Username
+            
+                        return (
+                            <li key={x}>
+                                <p>{Username}</p>
+                                <button onClick={()=>{RemoveFriend(x)}}>Remove</button>
+                            </li>
+                        )
+                    })
+                })
+            ).then(val => {
+                SetAddedFriends(val)
+            })
+        }, [AddChatForm])
+    
+        function handleAddChatFormSubmit(e: React.FormEvent<HTMLFormElement>){
+            e.preventDefault();
+    
+            if(socket){
+                socket.emit('addChat', {
+                    chat: {
+                        name: AddChatForm.Name,
+                        members: AddChatForm.Friends,
+                    }
+                })
+                SetAddChatForm({
+                    Name: "",
+                    Friends: []
+                })
+            }
+    
+    
+        }
 
-    function AddChatPopUpBody(){
         return (
             <div className="AddChat-Body">
                 <h3>Create a new Chat</h3>
@@ -122,7 +135,7 @@ export default function AddChat(){
                     <br />
                     <input type="text" id="AddChat-ChatName" onChange={AddChatNameFormHandler} value={AddChatForm.Name}></input>
                     <h3>Select friends to add to chat: </h3>
-                    <select id="AddChat-AddFriend" value={""} onChange={()=>{}}>
+                    <select id="AddChat-AddFriend" value={""} onChange={(e)=>{AddChatFormAddFriendHandler(e.target.value)}}>
                         <option></option>
                         {FriendOptions}
                     </select>
@@ -140,7 +153,7 @@ export default function AddChat(){
             <Popup trigger={
                 <button className="Sidebar-Button">Make Chat</button>
             }>
-                {AddChatPopUpBody()}
+                <AddChatPopUpBody />
             </Popup>
         </div>
     )

@@ -2,8 +2,9 @@ import { FieldValue } from 'firebase-admin/firestore';
 import admin from 'firebase-admin';
 import { Server, Socket } from 'socket.io';
 
+import { Bucket } from '@google-cloud/storage'
 
-module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Server){
+module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Server, bucket: Bucket){
     const { getUsernames } = require('../HelperFunctions')
 
     const uid = socket.request.headers.uid as string;

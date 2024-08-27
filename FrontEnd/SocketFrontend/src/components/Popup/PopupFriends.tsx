@@ -6,7 +6,7 @@ import UserActionPopup from "./UserActionPopup";
 
 import { User } from "../../interfaces";
 
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 
 import { useSocket, useLoadedUserGetter } from "../../CustomHooks";
 
@@ -69,34 +69,37 @@ export default function PopupFriends() {
   }
 
   function FriendsList(){
-    const styledFriends: JSX.Element[] = []
-    
-    Friends.forEach(x => {
-      const user = getLoadedUser(x)
+    const [styledFriends, SetStyledFriends] = useState<JSX.Element[]>([])
 
-      const Username = typeof(user) === "string" ? x : user.User.Username
-
-      const Status = typeof(user) === "string" ? -1 : user.Status
-
-      styledFriends.push(
-        <Popup trigger={
-          <li className="PopupFriends-Friend">
-            <span className="PopupFriends-Username">
-              <p>{Username}</p>
-            </span>
-            <div className='PopupFriends-UserStatus' style={{backgroundColor: Status ? 'green' : 'gray'}} />
-          </li>
-        }
-        position={['right top', 'right bottom']}
-        >
-          <UserActionPopup 
-            uid={typeof(user) === "string" ? x : user.User.uid}
-            chatOptions={false}
-          />
-        </Popup>
-        
-      )
-    })
+    useEffect(()=>{
+      Promise.all(Array.from(Friends).map(x => {
+        return getLoadedUser(x).then(user => {
+          const Username = typeof(user) === "string" ? x : user.User.Username
+  
+          const Status = typeof(user) === "string" ? -1 : user.Status
+  
+          return (
+            <Popup trigger={
+              <li className="PopupFriends-Friend">
+                <span className="PopupFriends-Username">
+                  <p>{Username}</p>
+                </span>
+                <div className='PopupFriends-UserStatus' style={{backgroundColor: Status ? 'green' : 'gray'}} />
+              </li>
+            }
+            position={['right top', 'right bottom']}
+            >
+              <UserActionPopup 
+                uid={typeof(user) === "string" ? x : user.User.uid}
+                chatOptions={false}
+              />
+            </Popup>
+          )
+        })
+      })).then(val => {
+        SetStyledFriends(val)
+      })
+    }, [])
 
     return (
       <>
@@ -114,7 +117,7 @@ export default function PopupFriends() {
         return FriendReqs()
       }
       case "Friends":{
-        return FriendsList()
+        return <FriendsList />
       }
       default: {
         return null;

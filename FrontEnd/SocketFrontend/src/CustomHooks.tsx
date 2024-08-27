@@ -93,6 +93,7 @@ import { getLoadedUserContext } from "./LoadedUserContextProvider";
 //functions for the loaded users state
 export function useLoadedUserGetter(){
     const {LoadedUsers, SetLoadedUsers} = useContext(getLoadedUserContext());
+    const Fetch = useFetch('http://localhost:3000')
 
     /*
         set user as a known user associated with uid uid
@@ -110,16 +111,24 @@ export function useLoadedUserGetter(){
     }, [SetLoadedUsers]);
 
     /*
-        returns the loaded user associated with uid, or if the loaded user does not exist
-        in the map of loaded users just return the uid
+        returns a promise that resolves with the loaded user associated with uid, or if the loaded user does not exist
+        in the map of loaded users then fetch the data of the user (not including the online status of the user)
+        update the loadeduser map and resolve the loaded user
     */
-    const getLoadedUser = useCallback((uid: string): string | KnownUser => {
-        const user = LoadedUsers.get(uid);
-        if(!user){
-            return uid;
-        }
-
-        return user;
+    const getLoadedUser = useCallback((uid: string): Promise<KnownUser> => {
+        return new Promise((resolve, reject) => {
+            const user = LoadedUsers.get(uid);
+            if(!user){
+                Fetch('getUserInfo', {TargetUid: uid}).then(val => {
+                    UpdateLoadedUser(val.User.uid, val)
+                    resolve(val)
+                }).catch(err => {
+                    reject(err)
+                })
+            }else{
+                resolve(user);
+            }
+        })
     }, [LoadedUsers])   
 
     /*

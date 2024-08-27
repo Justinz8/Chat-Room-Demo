@@ -31,7 +31,7 @@
 
 .UsersBar-Wrapper > h2{
     margin: 0;
-    width: 100%;
+    width: calc(100% - 20px);
     padding: 10px;
     border-bottom: 2px solid var(--accent-color2);
 }

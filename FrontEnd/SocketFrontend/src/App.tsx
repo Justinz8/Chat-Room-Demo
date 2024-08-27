@@ -8,10 +8,15 @@ import PopupAuth from "./components/Popup/PopupAuth";
 import ChatWindow from "./components/ChatArea/ChatWindow";
 import UsersBar from "./components/UsersBarComponents/UsersBar";
 
+import { useFetch } from "./CustomHooks";
+
 import "./App.css";
 
 function App() {
   const [loggedIn, setLoggedIn] = useState<number>(0);
+  const Fetch = useFetch("http://localhost:3000");
+
+  const [testimg, setTestimg] = useState("");
 
   /*
     Set the state for signed in based of AuthStateChanged changing from its default value of 0. 
@@ -33,16 +38,16 @@ function App() {
       return (
         <>
           <Sidebar />
-          <ChatWindow/>
+          <ChatWindow />
           <UsersBar />
         </>
       );
     } else if (loggedIn === -1) {
-      return <PopupAuth/>;
+      return <PopupAuth />;
     }
   }
 
-  return <div className="Main-Wrapper">{loadFunction()}</div>
+  return <div className="Main-Wrapper">{loadFunction()}</div>;
 }
 
 export default App;

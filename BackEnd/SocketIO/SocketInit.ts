@@ -1,7 +1,9 @@
 import admin from 'firebase-admin';
 import { Server, Socket } from 'socket.io';
 
-module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Server){
+import { Bucket } from '@google-cloud/storage'
+
+module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Server, bucket: Bucket){
     const uid = socket.request.headers.uid as string;
     console.log(`${uid} connected`);
 
