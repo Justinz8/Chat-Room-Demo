@@ -4,9 +4,16 @@ import { Express } from 'express';
 
 import { Bucket } from '@google-cloud/storage'
 
+import sharp from 'sharp'
+
+import { Request } from 'express';
+
+import fs from 'fs'
+
+import { getPFP, getPFPMap } from '../HelperFunctions';
+
 module.exports = function (app: Express, db: admin.firestore.Firestore, io: Server, bucket: Bucket) {
     const { getUsernames } = require('../HelperFunctions')
-    const { getPFP } = require('../HelperFunctions')
 
     /*
         Initiaized signup by creating a user in firebase users and creates a db 
@@ -47,7 +54,11 @@ module.exports = function (app: Express, db: admin.firestore.Firestore, io: Serv
 
             return Promise.all(querySnapshot.docs.map(doc => {//map each doc to a promise
                 const data = doc.data();
-                return getUsernames(data.ChatMemberIDs, userDataRef).then(members => {//return a member struct as the final value of the promise
+
+                return Promise.all([
+                    getUsernames(data.ChatMemberIDs, userDataRef),
+                    getPFPMap(data.ChatMemberIDs, bucket)
+                ]).then(([members, imgMap]) => {
                     return {//returns members of chats with names and their online status
                         name: data.ChatName,
                         id: doc.id,
@@ -56,17 +67,19 @@ module.exports = function (app: Express, db: admin.firestore.Firestore, io: Serv
                             if (io.sockets.adapter.rooms.get(x.uid)) {
                                 return {
                                     User: x,
+                                    UserPFP: imgMap.get(x.uid),
                                     Status: 1
                                 }
                             } else {
                                 return {
                                     User: x,
+                                    UserPFP: imgMap.get(x.uid),
                                     Status: 0
                                 }
                             }
                         })
                     };
-                });
+                })
             }));
         }).then(chats => {
             res.send({ success: true, chats: chats });
@@ -112,7 +125,7 @@ module.exports = function (app: Express, db: admin.firestore.Firestore, io: Serv
                 return;
             } else {
                 const map = new Map() //maps all user ids that show up in message history to their username
-
+                
                 if (!content.data().ChatEntries) return;
                 Promise.all(content.data().ChatEntries.map(x => {
                     switch (x.type) {
@@ -201,6 +214,8 @@ module.exports = function (app: Express, db: admin.firestore.Firestore, io: Serv
 
     app.post('/getUserData', (req, res) => {
         db.collection('UserData').doc(req.body.uid).get().then((doc1) => {
+            return Promise.all([getPFPMap([...doc1.data().FriendRequests, ...doc1.data().Friends], bucket), doc1])
+        }).then(([imgMap, doc1]) => {
             return Promise.all([
                 Promise.all(doc1.data().FriendRequests.map(x => {
                     return db.collection('UserData').doc(x).get().then(doc2 => {
@@ -218,14 +233,16 @@ module.exports = function (app: Express, db: admin.firestore.Firestore, io: Serv
                                 uid: x,
                                 Username: doc2.data().Username
                             },
+                            UserPFP: imgMap.get(x),
                             Status: Status
                         }
                     })
                 })),
-                doc1.data().Username
+                doc1.data().Username,
+                getPFP(req.body.uid, bucket)
             ])
         }).then(val => {
-            res.send({ success: true, requests: val[0], friends: val[1], Username: val[2] });
+            res.send({ success: true, requests: val[0], friends: val[1], Username: val[2], userPFP: val[3] });
         });
     });
 
@@ -238,5 +255,47 @@ module.exports = function (app: Express, db: admin.firestore.Firestore, io: Serv
                 Status: null
             }
         })
+    })
+
+
+
+    app.post('/UploadUserPFP', (req: Request & { file: any }, res) => {
+        // imagemagick.resize({
+        //     srcPath: "./temp.jpg",
+        //     dstPath: "./penis.jpg",
+        //     width: 50
+        // }, function(err, reulst){
+        //     if (err) throw err;
+        // })
+
+        const PFPName = `${req.body.FileTime}-${req.file.originalname}.jpg`
+
+        sharp(`./uploads/${PFPName}`).metadata().then(metadata => {
+            const height = metadata.height
+            const width = metadata.width
+
+            const size = Math.max(Math.floor(100 / Number.parseInt(req.body.PFPSize) * width), 0)
+
+            let left =  Math.max(-Math.floor(Number.parseFloat(req.body.PFPOffSetX) * width), 0)
+            let top = Math.max(-Math.floor(Number.parseFloat(req.body.PFPOffSetY) * width), 0)
+
+            left = Math.min(width - size, left)
+            top = Math.min(height - size, top)
+            
+            return sharp(`./uploads/${PFPName}`).extract({left: left, top: top, width: size, height: size}).resize(50, 50).toFile(`./uploadsFormatted/${PFPName}`)
+        }).then(()=>{
+            return bucket.upload(`./uploadsFormatted/${PFPName}`, {destination: `UserIcons/${req.body.uid}.jpg`})
+        }).then(()=>{
+            fs.unlink(`./uploads/${PFPName}`, (err) => {
+                if(err) throw err
+            })
+            fs.unlink(`./uploadsFormatted/${PFPName}`, (err) => {
+                if(err) throw err
+            })
+        }).catch(err => {
+            console.log(err)
+        })
+
+        console.log(req.file)
     })
 }

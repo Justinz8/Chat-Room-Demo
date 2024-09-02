@@ -1,11 +1,13 @@
 {
     "compilerOptions": {
-        "outDir": "./built",
-        "allowJs": true,
-        "target": "es5",
-        "resolveJsonModule": true,
-        "esModuleInterop": true
+      "module": "commonjs",
+      "esModuleInterop": true,
+      "target": "es6",
+      "moduleResolution": "node",
+      "sourceMap": true,
+      "outDir": "dist",
+      "resolveJsonModule": true
     },
-    "include": ["./**/*"], // Update the path to your TypeScript files
-    "files": ["./index.ts"] // Add the path to your main TypeScript file here
-}
+    "lib": ["es2015"],
+    "include": ["./**/*.ts"]
+  }

@@ -3,6 +3,7 @@ import admin from 'firebase-admin'
 import { Server, Socket } from 'socket.io'
 
 import { Bucket } from '@google-cloud/storage'
+import { getPFPMap } from '../HelperFunctions'
 
 module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Server, bucket: Bucket){
     const {getUsernames} = require('../HelperFunctions')
@@ -117,17 +118,23 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
                 owner: uid,
                 members: ChatMemberIDs
             },
-            getUsernames(ChatMemberIDs, userDataRef).then(users => {
+            Promise.all([
+                getUsernames(ChatMemberIDs, userDataRef),
+                getPFPMap(ChatMemberIDs, bucket)
+            ])
+            .then(([users, imgMap]) => {
                 //get online status of each user and add extra detail to each member
                 return users.map(x => {
                     if(io.sockets.adapter.rooms.get(x.uid)){
                         return {
                             User: x,
+                            UserPFP: imgMap.get(x.uid),
                             Status: 1
                         }
                     }else{
                         return {
                             User: x,
+                            UserPFP: imgMap.get(x.uid),
                             Status: 0
                         }
                     }
@@ -174,11 +181,15 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
                     ChatEntries: FieldValue.arrayUnion({uid: uid, addeduid: Frienduid, timestamp: Date.now(), type: 0})
                 })
             }).then(()=>{
-                getUsernames([uid, Frienduid], userDataRef).then((users)=>{
+                Promise.all([
+                    getUsernames([uid, Frienduid], userDataRef),
+                    getPFPMap([uid, Frienduid], bucket)
+                ]).then(([users, imgMap])=>{
                     io.to(ChatData.ChatMemberIDs).emit('UpdateChatUsers', { //emit to chat members to update member list
                         Chatid: Chatid, 
                         NewUser: {
                             User: users[1],
+                            UserPFP: imgMap.get(users[1].uid),
                             Status: io.sockets.adapter.rooms.get(users[1].uid) ? 1 : 0
                         }
                     })
@@ -192,16 +203,21 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
                     members: [...ChatData.ChatMemberIDs, Frienduid]
                 },
                 //get Usernames and online status of each member
-                getUsernames(ChatData.ChatMemberIDs, userDataRef).then(users => {
+                Promise.all([
+                    getUsernames(ChatData.ChatMemberIDs, userDataRef),
+                    getPFPMap(ChatData.ChatMemberIDs, bucket)
+                ]).then(([users, imgMap]) => {
                     return users.map(x => {
                         if(io.sockets.adapter.rooms.get(x.uid)){
                             return {
                                 User: x,
+                                UserPFP: imgMap.get(x.uid),
                                 Status: 1
                             }
                         }else{
                             return {
                                 User: x,
+                                UserPFP: imgMap.get(x.uid),
                                 Status: 0
                             }
                         }

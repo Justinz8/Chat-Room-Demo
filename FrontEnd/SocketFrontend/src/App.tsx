@@ -13,41 +13,41 @@ import { useFetch } from "./CustomHooks";
 import "./App.css";
 
 function App() {
-  const [loggedIn, setLoggedIn] = useState<number>(0);
-  const Fetch = useFetch("http://localhost:3000");
+    const [loggedIn, setLoggedIn] = useState<number>(0);
+    const Fetch = useFetch("http://localhost:3000");
 
-  const [testimg, setTestimg] = useState("");
+    const [testimg, setTestimg] = useState("");
 
-  /*
+    /*
     Set the state for signed in based of AuthStateChanged changing from its default value of 0. 
     This is to prevent attempted loading of resources before the state of the page has been 
     properly set
   */
-  useEffect(() => {
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setLoggedIn(1);
-      } else {
-        setLoggedIn(-1);
-      }
-    });
-  }, []);
+    useEffect(() => {
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                setLoggedIn(1);
+            } else {
+                setLoggedIn(-1);
+            }
+        });
+    }, []);
 
-  function loadFunction() {
-    if (loggedIn === 1) {
-      return (
-        <>
-          <Sidebar />
-          <ChatWindow />
-          <UsersBar />
-        </>
-      );
-    } else if (loggedIn === -1) {
-      return <PopupAuth />;
+    function loadFunction() {
+        if (loggedIn === 1) {
+            return (
+                <>
+                    <Sidebar />
+                    <ChatWindow />
+                    <UsersBar />
+                </>
+            );
+        } else if (loggedIn === -1) {
+            return <PopupAuth />;
+        }
     }
-  }
 
-  return <div className="Main-Wrapper">{loadFunction()}</div>;
+    return <div className="Main-Wrapper">{loadFunction()}</div>;
 }
 
 export default App;

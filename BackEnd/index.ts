@@ -17,6 +17,8 @@ import { getStorage } from 'firebase-admin/storage';
 
 import { getFirestore } from 'firebase-admin/firestore';
 
+import multer from 'multer'
+
 import serviceAccount from "./fir-test-5bb7c-firebase-adminsdk-f38j5-05e81d9be2.json";
 
 admin.initializeApp({
@@ -34,6 +36,27 @@ const port = 3000;
 app.use(express.json());
 
 app.use(cors({ origin: '*' }));
+
+const storage = multer.diskStorage({
+    destination: function(req, file, cb){
+        cb(null, './uploads')
+    },
+    filename: function(req, file, cb){
+        const time = Date.now()
+        req.body.FileTime = time
+        cb(null, `${time}-${file.originalname}.jpg`)
+    }
+})
+
+const upload = multer({storage: storage, fileFilter: function(req, file, cb){
+    if(file.mimetype === 'img/png' || file.mimetype === 'img/jpg' || file.mimetype === 'img/jpeg'){
+        cb(null, false)
+    }else{
+        cb(null, true)
+    }
+}})
+
+app.use(upload.single('PFP'))
 
 //if user is attempting to sign up then no need to vertify token
 //otherwise check if token is valid and if so, store the uid in the body for future use

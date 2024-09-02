@@ -3,6 +3,7 @@ import admin from 'firebase-admin';
 import { Server, Socket } from 'socket.io';
 
 import { Bucket } from '@google-cloud/storage'
+import { getPFPMap } from '../HelperFunctions';
 
 module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Server, bucket: Bucket){
     const { getUsernames } = require('../HelperFunctions')
@@ -37,17 +38,20 @@ module.exports = function(db: admin.firestore.Firestore, socket: Socket, io: Ser
                 })
             ])
         }).then(()=>{
-            return getUsernames([AcceptedUser, uid], UserDataRef)
-        }).then((Users)=>{
+            return Promise.all([getUsernames([AcceptedUser, uid], UserDataRef),
+                                getPFPMap([AcceptedUser, uid], bucket)])
+        }).then(([Users, imgMap])=>{
             //check if new friend is online or not
             const NewFriendStatus = io.sockets.adapter.rooms.get(Users[0].uid) !== undefined ? 1 : 0
 
             io.to(uid).emit("NewFriend", {
                 User: Users[0],
+                UserPFP: imgMap.get(uid),
                 Status: NewFriendStatus
             });
             io.to(AcceptedUser).emit("NewFriend", {
                 User: Users[1],
+                UserPFP: imgMap.get(uid),
                 Status: 1
             });
         }).catch(err=>{

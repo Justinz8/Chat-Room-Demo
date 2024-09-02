@@ -22,18 +22,30 @@ function getUsernames(UserIDs: string[], userDataRef) {
 
 function getImage(prefix: string, name: string, type: string, bucket: Bucket) {
     return bucket.file(`${prefix}/${name}.${type}`).download().then((content) => {
-        return { img: `data:image/${type};base64,${Buffer.from(content[0]).toString("base64")}` };
+        return `data:image/${type};base64,${Buffer.from(content[0]).toString("base64")}`
     })
 }
 
-function getPFP(uid: string, bucket: Bucket) {
+function getPFP(uid: string, bucket: Bucket):Promise<string> {
     return getImage('UserIcons', uid, 'jpg', bucket).catch(err => {
-        return undefined
+        return ""
     })
 }
 
-exports.getUsernames = getUsernames
+//given an array of uid's, get the PFP of each uid and create a map where key: uid, value: img
+function getPFPMap(members: string[], bucket){
+    const imgMap = new Map<string, string>()
 
-exports.getImage = getImage
+    return Promise.all(//Promise array to get userPFP of each uid and storing it in a map
+        members.map(uid => {
+            if(imgMap.has(uid)) return //if already got image of a uid just skip
+            return getPFP(uid, bucket).then((img) => {
+                imgMap.set(uid, img)
+            })
+        }
+    )).then(() => {
+        return imgMap
+    })
+}
 
-exports.getPFP = getPFP
+export { getUsernames, getImage, getPFP, getPFPMap }
