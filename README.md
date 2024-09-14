@@ -1,6 +1,6 @@
 ## Chat Room
 
-A simple chat room created using node, react, typescript, firebase, and socket io.
+A simple chat room created using node, react, typescript, firebase, Google Cloud Storage, and socket io.
 
 This project includes:
 
@@ -11,6 +11,8 @@ This project includes:
 -Adding Friends
 
 -Multiline messages
+
+-Changing user PFPs
 
 -Chat functionalities including:
 
